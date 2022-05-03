@@ -100,6 +100,29 @@ func (root NodeRef) Print() string {
 	return fmt.Sprintf("%s:[%s]", root.NodeName, strings.Join(subs, ","))
 }
 
+const (
+	WHITE = 0
+	GRAY  = 1
+	BLACK = 2
+)
+
+func (root NodeRef) HasCycle(color map[string]int8) bool {
+	color[root.NodeName] = GRAY
+
+	for _, ref := range root.SubRefs {
+		if color[ref.NodeName] == GRAY {
+			return true
+		}
+
+		if color[ref.NodeName] == WHITE && ref.HasCycle(color) {
+			return true
+		}
+	}
+
+	color[root.NodeName] = BLACK
+	return false
+}
+
 type Vertex struct {
 	Prev int
 
@@ -124,9 +147,33 @@ func newDAG() *DAG {
 	}
 }
 
-func (graph DAG) Verify() bool {
-	//TODO DAG verify
-	return true
+func (graph DAG) Verify() error {
+	defer graph.Reset()
+
+	left := make([]string, 0)
+	color := make(map[string]int8)
+
+	nodeNames := graph.Next()
+	for len(nodeNames) > 0 {
+		for _, nodeName := range nodeNames {
+			if graph.NodeRefs[nodeName].HasCycle(color) {
+				return fmt.Errorf("found cycle in node: %s", nodeName)
+			}
+		}
+
+		nodeNames = graph.Next()
+	}
+
+	for _, vertex := range graph.Vertexes {
+		if !vertex.Traversed {
+			left = append(left, vertex.RefRoot.NodeName)
+		}
+	}
+
+	if len(left) != 0 {
+		return fmt.Errorf("found cycle between nodes: %v", left)
+	}
+	return nil
 }
 
 func (graph DAG) Next() []string {

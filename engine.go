@@ -50,6 +50,12 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			for _, option := range plan.Options {
 				option(plan.graph)
 			}
+
+			if err := plan.graph.Verify(); err != nil {
+				output.Err = fmt.Errorf("invalid plan, %w", err)
+				outputCh <- output
+				return
+			}
 		}
 
 		nodeNames := plan.graph.Next()
