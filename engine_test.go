@@ -57,6 +57,23 @@ func (node *TestNode3) Run(ctx context.Context) {
 	fmt.Printf("Cluster %s stopped\n", node.Base.NodeName)
 }
 
+type TestNode4 struct {
+	running.Base
+}
+
+func (node *TestNode4) Run(ctx context.Context) {
+}
+
+type TestNode5 struct {
+	running.Base
+}
+
+func (node *TestNode5) Run(ctx context.Context) {
+	for _, n := range node.Base.SubNodes {
+		n.Run(ctx)
+	}
+}
+
 func init() {
 	rand.Seed(time.Now().Unix())
 }
@@ -89,4 +106,29 @@ func TestEngine(t *testing.T) {
 	out := <-running.Global.ExecPlan("P1", context.Background())
 
 	fmt.Println(out)
+}
+
+func BenchmarkEngine_ExecPlan(b *testing.B) {
+	running.Global.RegisterNodeBuilder("A", func(props running.Props) running.Node {
+		return &TestNode4{}
+	})
+	running.Global.RegisterNodeBuilder("B", func(props running.Props) running.Node {
+		return &TestNode5{}
+	})
+
+	ops := []running.Option{
+		running.AddNodes("A", "A1", "A2", "A3", "A4"),
+		running.AddNodes("B", "B1", "B2"),
+		running.LinkNodes("A1", "B1", "B2"),
+		running.MergeNodes("B1", "A2", "A3"),
+		running.MergeNodes("B1", "A4"),
+	}
+
+	plan := running.NewPlan(running.EmptyProps{}, ops...)
+
+	running.Global.RegisterPlan("P1", plan)
+
+	for i := 0; i < b.N; i++ {
+		_ = <-running.Global.ExecPlan("P1", context.Background())
+	}
 }

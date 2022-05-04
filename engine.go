@@ -12,6 +12,8 @@ var Global = &Engine{
 	plans: map[string]*Plan{},
 
 	nodeCache: map[string]map[string]Node{},
+
+	pools: map[string]*WorkerPool{},
 }
 
 type Engine struct {
@@ -20,6 +22,8 @@ type Engine struct {
 	plans map[string]*Plan
 
 	nodeCache map[string]map[string]Node
+
+	pools map[string]*WorkerPool
 }
 
 func (engine *Engine) RegisterNodeBuilder(name string, builder BuildNodeFunc) {
@@ -32,6 +36,10 @@ func (engine *Engine) RegisterPlan(name string, plan *Plan) {
 }
 
 func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
+	if engine.pools[name] != nil {
+		return engine.pools[name].GetWorker().Work(ctx)
+	}
+
 	output := Output{}
 	outputCh := make(chan Output, 1)
 
@@ -43,7 +51,6 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 		}
 
 		plan := engine.plans[name]
-		state := NewStandardState()
 		nodeMap := map[string]Node{}
 
 		if plan.graph == nil {
@@ -71,10 +78,6 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 						return
 					}
 				}
-
-				if statefulNode, ok := nodeMap[nodeName].(Stateful); ok {
-					statefulNode.Bind(state)
-				}
 			}
 		}
 
@@ -88,23 +91,23 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			plan.cached = true
 		}
 
-		var wg sync.WaitGroup
-
-		for _, nodeNames := range steps {
-			for _, nodeName := range nodeNames {
-				wg.Add(1)
-
-				go func(nodeName string) {
-					nodeMap[nodeName].Run(ctx)
-					wg.Done()
-				}(nodeName)
-			}
-
-			wg.Wait()
+		pool := &WorkerPool{
+			sync.Pool{
+				New: func() interface{} {
+					return Worker{
+						steps: steps,
+						nodes: nodeMap,
+					}
+				},
+			},
 		}
 
-		output.State = state
+		worker := pool.GetWorker()
+		output = <-worker.Work(ctx)
 		outputCh <- output
+		pool.Put(worker)
+
+		engine.pools[name] = pool
 		return
 	}()
 
