@@ -132,14 +132,15 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string) (Node
 		return rootNode, nil
 	}
 
-	subNodes := map[string]Node{}
+	var subNodes []Node
 	for _, ref := range root.SubRefs {
 		if len(ref.SubRefs) == 0 {
 			if builder := engine.builders[ref.NodeType]; builder == nil {
 				return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
 			} else {
-				subNodes[ref.NodeName] = builder(props)
-				subNodes[ref.NodeName].SetName(rootNode.Name() + "." + ref.NodeName)
+				subNode := builder(props)
+				subNode.SetName(rootNode.Name() + "." + ref.NodeName)
+				subNodes = append(subNodes, subNode)
 			}
 		} else {
 			if prefix == "" {
@@ -150,7 +151,7 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string) (Node
 			if subNode, err := engine.buildNode(ref, props, prefix); err != nil {
 				return nil, err
 			} else {
-				subNodes[ref.NodeName] = subNode
+				subNodes = append(subNodes, subNode)
 			}
 
 		}

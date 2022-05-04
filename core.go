@@ -15,7 +15,7 @@ type Node interface {
 type Cluster interface {
 	Node
 
-	Inject(nodes map[string]Node)
+	Inject(nodes []Node)
 }
 
 type Stateful interface {
@@ -51,7 +51,7 @@ type Base struct {
 
 	State State
 
-	SubNodes map[string]Node
+	SubNodes []Node
 }
 
 func (base *Base) SetName(name string) {
@@ -62,7 +62,7 @@ func (base *Base) Name() string {
 	return base.NodeName
 }
 
-func (base *Base) Inject(nodes map[string]Node) {
+func (base *Base) Inject(nodes []Node) {
 	base.SubNodes = nodes
 }
 
