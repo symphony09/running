@@ -58,8 +58,8 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			}
 		}
 
-		nodeNames := plan.graph.Next()
-		for len(nodeNames) > 0 {
+		steps, _ := plan.graph.Steps()
+		for _, nodeNames := range steps {
 			for _, nodeName := range nodeNames {
 				if plan.cached && engine.nodeCache[name][nodeName] != nil {
 					nodeMap[nodeName] = engine.nodeCache[name][nodeName].(Cloneable).Clone()
@@ -75,8 +75,6 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 					statefulNode.Bind(state)
 				}
 			}
-
-			nodeNames = plan.graph.Next()
 		}
 
 		if !plan.cached {
@@ -89,14 +87,10 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			plan.cached = true
 		}
 
-		plan.graph.Reset()
-		nodeNames = plan.graph.Next()
-		for len(nodeNames) > 0 {
+		for _, nodeNames := range steps {
 			for _, nodeName := range nodeNames {
 				nodeMap[nodeName].Run(ctx)
 			}
-
-			nodeNames = plan.graph.Next()
 		}
 
 		output.State = state

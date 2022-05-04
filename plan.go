@@ -3,6 +3,7 @@ package running
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 type Plan struct {
@@ -137,6 +138,8 @@ type DAG struct {
 	NodeRefs map[string]*NodeRef
 
 	Vertexes map[string]*Vertex
+
+	sync.Mutex
 }
 
 func newDAG() *DAG {
@@ -147,55 +150,67 @@ func newDAG() *DAG {
 	}
 }
 
-func (graph DAG) Verify() error {
-	defer graph.Reset()
-
-	left := make([]string, 0)
+func (graph *DAG) Verify() error {
 	color := make(map[string]int8)
 
-	nodeNames := graph.Next()
-	for len(nodeNames) > 0 {
+	steps, left := graph.Steps()
+
+	if len(left) != 0 {
+		return fmt.Errorf("found cycle between nodes: %v", left)
+	}
+
+	for _, nodeNames := range steps {
 		for _, nodeName := range nodeNames {
 			if graph.NodeRefs[nodeName].HasCycle(color) {
 				return fmt.Errorf("found cycle in node: %s", nodeName)
 			}
 		}
-
-		nodeNames = graph.Next()
 	}
 
+	return nil
+}
+
+func (graph *DAG) Steps() ([][]string, []string) {
+	steps := make([][]string, 0)
+
+	graph.Lock()
+	for {
+		var names []string
+
+		for name, vertex := range graph.Vertexes {
+			if !vertex.Traversed && vertex.Prev == 0 {
+				names = append(names, name)
+			}
+		}
+
+		if len(names) == 0 {
+			break
+		}
+
+		for _, name := range names {
+			graph.Vertexes[name].Traversed = true
+			for _, vertex := range graph.Vertexes[name].Next {
+				vertex.Prev--
+			}
+		}
+
+		steps = append(steps, names)
+	}
+
+	left := make([]string, 0)
 	for _, vertex := range graph.Vertexes {
 		if !vertex.Traversed {
 			left = append(left, vertex.RefRoot.NodeName)
 		}
 	}
 
-	if len(left) != 0 {
-		return fmt.Errorf("found cycle between nodes: %v", left)
-	}
-	return nil
+	graph.reset()
+	graph.Unlock()
+
+	return steps, left
 }
 
-func (graph DAG) Next() []string {
-	var names []string
-
-	for name, vertex := range graph.Vertexes {
-		if !vertex.Traversed && vertex.Prev == 0 {
-			names = append(names, name)
-		}
-	}
-
-	for _, name := range names {
-		graph.Vertexes[name].Traversed = true
-		for _, vertex := range graph.Vertexes[name].Next {
-			vertex.Prev--
-		}
-	}
-
-	return names
-}
-
-func (graph *DAG) Reset() {
+func (graph *DAG) reset() {
 	for _, vertex := range graph.Vertexes {
 		vertex.Traversed = false
 		for _, nextVertex := range vertex.Next {
