@@ -3,8 +3,11 @@ package running_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"running"
+	"sync"
 	"testing"
+	"time"
 )
 
 type TestNode1 struct {
@@ -12,11 +15,9 @@ type TestNode1 struct {
 }
 
 func (node *TestNode1) Run(ctx context.Context) {
-	fmt.Println("Node 1 running")
-
-	//for _, n := range node.Base.SubNodes {
-	//	n.Run(ctx)
-	//}
+	fmt.Printf("Single Node %s running\n", node.Base.NodeName)
+	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+	fmt.Printf("Single Node %s stopped\n", node.Base.NodeName)
 }
 
 type TestNode2 struct {
@@ -24,11 +25,13 @@ type TestNode2 struct {
 }
 
 func (node *TestNode2) Run(ctx context.Context) {
-	//fmt.Println("Node 2 running")
+	fmt.Printf("Cluster %s running\n", node.Base.NodeName)
 
 	for _, n := range node.Base.SubNodes {
 		n.Run(ctx)
 	}
+
+	fmt.Printf("Cluster %s stopped\n", node.Base.NodeName)
 }
 
 type TestNode3 struct {
@@ -36,11 +39,26 @@ type TestNode3 struct {
 }
 
 func (node *TestNode3) Run(ctx context.Context) {
-	//fmt.Println("Node 3 running")
+	fmt.Printf("Cluster %s running\n", node.Base.NodeName)
+
+	var wg sync.WaitGroup
 
 	for _, n := range node.Base.SubNodes {
-		n.Run(ctx)
+		wg.Add(1)
+
+		go func(node running.Node) {
+			node.Run(ctx)
+
+			wg.Done()
+		}(n)
 	}
+
+	wg.Wait()
+	fmt.Printf("Cluster %s stopped\n", node.Base.NodeName)
+}
+
+func init() {
+	rand.Seed(time.Now().Unix())
 }
 
 func TestEngine(t *testing.T) {
@@ -55,13 +73,13 @@ func TestEngine(t *testing.T) {
 	})
 
 	ops := []running.Option{
-		running.AddNodes("A", "A1", "A2", "A3", "A4"),
+		running.AddNodes("A", "A1", "A2", "A3", "A4", "A5"),
 		running.AddNodes("B", "B1"),
 		running.AddNodes("C", "C1"),
 		running.LinkNodes("B1", "A2", "C1"),
 		running.MergeNodes("A3", "A4"),
 		running.MergeNodes("B1", "A1", "A3"),
-		running.MergeNodes("C1", "A4"),
+		running.MergeNodes("C1", "A4", "A5"),
 	}
 
 	plan := running.NewPlan(running.EmptyProps{}, ops...)

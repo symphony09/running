@@ -3,6 +3,7 @@ package running
 import (
 	"context"
 	"fmt"
+	"sync"
 )
 
 var Global = &Engine{
@@ -64,7 +65,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 				if plan.cached && engine.nodeCache[name][nodeName] != nil {
 					nodeMap[nodeName] = engine.nodeCache[name][nodeName].(Cloneable).Clone()
 				} else {
-					nodeMap[nodeName], output.Err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.Props)
+					nodeMap[nodeName], output.Err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.Props, "")
 					if output.Err != nil {
 						outputCh <- output
 						return
@@ -87,10 +88,19 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			plan.cached = true
 		}
 
+		var wg sync.WaitGroup
+
 		for _, nodeNames := range steps {
 			for _, nodeName := range nodeNames {
-				nodeMap[nodeName].Run(ctx)
+				wg.Add(1)
+
+				go func(nodeName string) {
+					nodeMap[nodeName].Run(ctx)
+					wg.Done()
+				}(nodeName)
 			}
+
+			wg.Wait()
 		}
 
 		output.State = state
@@ -101,10 +111,15 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 	return outputCh
 }
 
-func (engine *Engine) buildNode(root *NodeRef, props Props) (Node, error) {
+func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string) (Node, error) {
 	var rootNode Node
 	if builder := engine.builders[root.NodeType]; builder != nil {
 		rootNode = builder(props)
+		if prefix != "" {
+			rootNode.SetName(prefix + "." + root.NodeName)
+		} else {
+			rootNode.SetName(root.NodeName)
+		}
 	} else {
 		return nil, fmt.Errorf("no builder found for type %s", root.NodeType)
 	}
@@ -121,9 +136,15 @@ func (engine *Engine) buildNode(root *NodeRef, props Props) (Node, error) {
 				return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
 			} else {
 				subNodes[ref.NodeName] = builder(props)
+				subNodes[ref.NodeName].SetName(rootNode.Name() + "." + ref.NodeName)
 			}
 		} else {
-			if subNode, err := engine.buildNode(ref, props); err != nil {
+			if prefix == "" {
+				prefix = root.NodeName
+			} else {
+				prefix = prefix + "." + root.NodeName
+			}
+			if subNode, err := engine.buildNode(ref, props, prefix); err != nil {
 				return nil, err
 			} else {
 				subNodes[ref.NodeName] = subNode

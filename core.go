@@ -5,6 +5,10 @@ import (
 )
 
 type Node interface {
+	SetName(name string)
+
+	Name() string
+
 	Run(ctx context.Context)
 }
 
@@ -43,9 +47,19 @@ type State interface {
 type TransformStateFunc func(from interface{}) interface{}
 
 type Base struct {
+	NodeName string
+
 	State State
 
 	SubNodes map[string]Node
+}
+
+func (base *Base) SetName(name string) {
+	base.NodeName = name
+}
+
+func (base *Base) Name() string {
+	return base.NodeName
 }
 
 func (base *Base) Inject(nodes map[string]Node) {
