@@ -36,82 +36,89 @@ func (engine *Engine) RegisterPlan(name string, plan *Plan) {
 }
 
 func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
-	if engine.pools[name] != nil {
-		return engine.pools[name].GetWorker().Work(ctx)
+	if engine.pools[name] == nil {
+		engine.pools[name] = &WorkerPool{
+			sync.Pool{
+				New: func() interface{} {
+					worker, err := engine.buildWorker(name)
+					if err != nil {
+						return err
+					} else {
+						return worker
+					}
+				},
+			},
+		}
 	}
 
 	output := Output{}
 	outputCh := make(chan Output, 1)
 
 	go func() {
-		if engine.plans[name] == nil {
-			output.Err = fmt.Errorf("plan not found, name: %s", name)
+		worker, err := engine.pools[name].GetWorker()
+		if err != nil {
+			output.Err = err
 			outputCh <- output
 			return
 		}
-
-		plan := engine.plans[name]
-		nodeMap := map[string]Node{}
-
-		if plan.graph == nil {
-			plan.graph = newDAG()
-			for _, option := range plan.Options {
-				option(plan.graph)
-			}
-
-			if err := plan.graph.Verify(); err != nil {
-				output.Err = fmt.Errorf("invalid plan, %w", err)
-				outputCh <- output
-				return
-			}
-		}
-
-		steps, _ := plan.graph.Steps()
-		for _, nodeNames := range steps {
-			for _, nodeName := range nodeNames {
-				if plan.cached && engine.nodeCache[name][nodeName] != nil {
-					nodeMap[nodeName] = engine.nodeCache[name][nodeName].(Cloneable).Clone()
-				} else {
-					nodeMap[nodeName], output.Err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.Props, "")
-					if output.Err != nil {
-						outputCh <- output
-						return
-					}
-				}
-			}
-		}
-
-		if !plan.cached {
-			for nodeName, node := range nodeMap {
-				if _, ok := node.(Cloneable); ok {
-					engine.nodeCache[name][nodeName] = node
-				}
-			}
-
-			plan.cached = true
-		}
-
-		pool := &WorkerPool{
-			sync.Pool{
-				New: func() interface{} {
-					return Worker{
-						steps: steps,
-						nodes: nodeMap,
-					}
-				},
-			},
-		}
-
-		worker := pool.GetWorker()
 		output = <-worker.Work(ctx)
 		outputCh <- output
-		pool.Put(worker)
-
-		engine.pools[name] = pool
-		return
+		engine.pools[name].Put(worker)
 	}()
 
 	return outputCh
+}
+
+func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
+	if engine.plans[name] == nil {
+		err = fmt.Errorf("plan not found, name: %s", name)
+		return
+	}
+
+	plan := engine.plans[name]
+	nodeMap := map[string]Node{}
+
+	if plan.graph == nil {
+		plan.graph = newDAG()
+		for _, option := range plan.Options {
+			option(plan.graph)
+		}
+
+		if err = plan.graph.Verify(); err != nil {
+			err = fmt.Errorf("invalid plan, %w", err)
+			return
+		}
+	}
+
+	steps, _ := plan.graph.Steps()
+	for _, nodeNames := range steps {
+		for _, nodeName := range nodeNames {
+			if plan.cached && engine.nodeCache[name][nodeName] != nil {
+				nodeMap[nodeName] = engine.nodeCache[name][nodeName].(Cloneable).Clone()
+			} else {
+				nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.Props, "")
+				if err != nil {
+					return
+				}
+			}
+		}
+	}
+
+	if !plan.cached {
+		for nodeName, node := range nodeMap {
+			if _, ok := node.(Cloneable); ok {
+				engine.nodeCache[name][nodeName] = node
+			}
+		}
+
+		plan.cached = true
+	}
+
+	worker = &Worker{
+		steps: steps,
+		nodes: nodeMap,
+	}
+	return
 }
 
 func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string) (Node, error) {

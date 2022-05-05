@@ -9,8 +9,13 @@ type WorkerPool struct {
 	sync.Pool
 }
 
-func (pool *WorkerPool) GetWorker() Worker {
-	return pool.Get().(Worker)
+func (pool *WorkerPool) GetWorker() (*Worker, error) {
+	got := pool.Get()
+	if worker, ok := got.(*Worker); ok {
+		return worker, nil
+	} else {
+		return nil, got.(error)
+	}
 }
 
 type Worker struct {
