@@ -114,6 +114,57 @@ func TestEngine(t *testing.T) {
 	fmt.Println(out)
 }
 
+type TestNode6 struct {
+	running.Base
+
+	chosen string
+}
+
+func (node *TestNode6) Run(ctx context.Context) {
+	fmt.Printf("Cluster %s running\n", node.Name())
+
+	for _, subNode := range node.Base.SubNodes {
+		if subNode.Name() == node.chosen {
+			subNode.Run(ctx)
+		}
+	}
+
+	fmt.Printf("Cluster %s stopped\n", node.Name())
+}
+
+func TestProps(t *testing.T) {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+		node := new(TestNode6)
+		node.SetName(name)
+		chosen, _ := props.Get(name + ".chosen")
+		node.chosen, _ = chosen.(string)
+		node.chosen = name + "." + node.chosen
+		return node
+	})
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+		node := new(TestNode1)
+		node.SetName(name)
+		return node
+	})
+
+	props := running.StandardProps(map[string]interface{}{"A1.chosen": "B2"})
+
+	ops := []running.Option{
+		running.AddNodes("A", "A1"),
+		running.AddNodes("B", "B1", "B2", "B3"),
+		running.MergeNodes("A1", "B1", "B2", "B3"),
+		running.LinkNodes("A1"),
+	}
+
+	plan := running.NewPlan(props, ops...)
+
+	running.Global.RegisterPlan("P2", plan)
+
+	out := <-running.Global.ExecPlan("P2", context.Background())
+
+	fmt.Println(out)
+}
+
 func BenchmarkEngine_ExecPlan(b *testing.B) {
 	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
 		node := new(TestNode4)
