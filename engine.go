@@ -124,11 +124,10 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string) (Node, error) {
 	var rootNode Node
 	if builder := engine.builders[root.NodeType]; builder != nil {
-		rootNode = builder(props)
 		if prefix != "" {
-			rootNode.SetName(prefix + "." + root.NodeName)
+			rootNode = builder(prefix+"."+root.NodeName, props)
 		} else {
-			rootNode.SetName(root.NodeName)
+			rootNode = builder(root.NodeName, props)
 		}
 	} else {
 		return nil, fmt.Errorf("no builder found for type %s", root.NodeType)
@@ -145,8 +144,7 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string) (Node
 			if builder := engine.builders[ref.NodeType]; builder == nil {
 				return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
 			} else {
-				subNode := builder(props)
-				subNode.SetName(rootNode.Name() + "." + ref.NodeName)
+				subNode := builder(rootNode.Name()+"."+ref.NodeName, props)
 				subNodes = append(subNodes, subNode)
 			}
 		} else {

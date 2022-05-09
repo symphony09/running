@@ -5,8 +5,6 @@ import (
 )
 
 type Node interface {
-	SetName(name string)
-
 	Name() string
 
 	Run(ctx context.Context)
@@ -34,7 +32,7 @@ type Props interface {
 	Get(key string) (interface{}, bool)
 }
 
-type BuildNodeFunc func(props Props) Node
+type BuildNodeFunc func(name string, props Props) Node
 
 type State interface {
 	Query(key string) (interface{}, bool)

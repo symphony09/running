@@ -79,14 +79,20 @@ func init() {
 }
 
 func TestEngine(t *testing.T) {
-	running.Global.RegisterNodeBuilder("A", func(props running.Props) running.Node {
-		return &TestNode1{}
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+		node := new(TestNode1)
+		node.SetName(name)
+		return node
 	})
-	running.Global.RegisterNodeBuilder("B", func(props running.Props) running.Node {
-		return &TestNode2{}
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+		node := new(TestNode2)
+		node.SetName(name)
+		return node
 	})
-	running.Global.RegisterNodeBuilder("C", func(props running.Props) running.Node {
-		return &TestNode3{}
+	running.Global.RegisterNodeBuilder("C", func(name string, props running.Props) running.Node {
+		node := new(TestNode3)
+		node.SetName(name)
+		return node
 	})
 
 	ops := []running.Option{
@@ -109,11 +115,15 @@ func TestEngine(t *testing.T) {
 }
 
 func BenchmarkEngine_ExecPlan(b *testing.B) {
-	running.Global.RegisterNodeBuilder("A", func(props running.Props) running.Node {
-		return &TestNode4{}
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+		node := new(TestNode4)
+		node.SetName(name)
+		return node
 	})
-	running.Global.RegisterNodeBuilder("B", func(props running.Props) running.Node {
-		return &TestNode5{}
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+		node := new(TestNode5)
+		node.SetName(name)
+		return node
 	})
 
 	ops := []running.Option{
