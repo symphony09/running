@@ -165,6 +165,75 @@ func TestProps(t *testing.T) {
 	fmt.Println(out)
 }
 
+type TestNode7 struct {
+	running.Base
+}
+
+func (node *TestNode7) Run(ctx context.Context) {
+	fmt.Printf("Single Node %s running\n", node.Name())
+
+	select {
+	case <-time.After(150 * time.Millisecond):
+		fmt.Println("overslept")
+	case <-ctx.Done():
+		fmt.Println(ctx.Err()) // prints "context deadline exceeded"
+	}
+
+	fmt.Printf("Single Node %s stopped\n", node.Name())
+}
+
+type TestNode8 struct {
+	running.Base
+
+	loop int
+}
+
+func (node *TestNode8) Run(ctx context.Context) {
+	fmt.Printf("Cluster %s running\n", node.Name())
+
+	for i := 0; i < node.loop; i++ {
+		for _, subNode := range node.Base.SubNodes {
+			subNode.Run(ctx)
+		}
+	}
+
+	fmt.Printf("Cluster %s stopped\n", node.Name())
+}
+
+func TestCtx(t *testing.T) {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+		node := new(TestNode8)
+		node.SetName(name)
+		loop, _ := props.Get(name + ".loop")
+		node.loop, _ = loop.(int)
+		return node
+	})
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+		node := new(TestNode7)
+		node.SetName(name)
+		return node
+	})
+
+	props := running.StandardProps(map[string]interface{}{"A1.loop": 5})
+
+	ops := []running.Option{
+		running.AddNodes("A", "A1"),
+		running.AddNodes("B", "B1"),
+		running.MergeNodes("A1", "B1"),
+		running.LinkNodes("A1"),
+	}
+
+	plan := running.NewPlan(props, ops...)
+
+	running.Global.RegisterPlan("P3", plan)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	defer cancel()
+	out := <-running.Global.ExecPlan("P3", ctx)
+
+	fmt.Println(out)
+}
+
 func BenchmarkEngine_ExecPlan(b *testing.B) {
 	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
 		node := new(TestNode4)
