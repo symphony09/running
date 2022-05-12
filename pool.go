@@ -22,6 +22,8 @@ type Worker struct {
 	steps [][]string
 
 	nodes map[string]Node
+
+	version string
 }
 
 func (worker Worker) Work(ctx context.Context) <-chan Output {

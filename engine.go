@@ -3,15 +3,15 @@ package running
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
+	"time"
 )
 
 var Global = &Engine{
 	builders: map[string]BuildNodeFunc{},
 
 	plans: map[string]*Plan{},
-
-	nodeCache: map[string]map[string]Node{},
 
 	pools: map[string]*WorkerPool{},
 }
@@ -21,8 +21,6 @@ type Engine struct {
 
 	plans map[string]*Plan
 
-	nodeCache map[string]map[string]Node
-
 	pools map[string]*WorkerPool
 }
 
@@ -31,30 +29,36 @@ func (engine *Engine) RegisterNodeBuilder(name string, builder BuildNodeFunc) {
 }
 
 func (engine *Engine) RegisterPlan(name string, plan *Plan) {
+	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
 	engine.plans[name] = plan
-	engine.nodeCache[name] = map[string]Node{}
 }
 
 func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
-	if engine.pools[name] == nil {
-		engine.pools[name] = &WorkerPool{
-			sync.Pool{
-				New: func() interface{} {
-					worker, err := engine.buildWorker(name)
-					if err != nil {
-						return err
-					} else {
-						return worker
-					}
-				},
-			},
-		}
-	}
-
 	output := Output{}
 	outputCh := make(chan Output, 1)
 
 	go func() {
+		if engine.plans[name] == nil {
+			output.Err = fmt.Errorf("plan not found, name: %s", name)
+			outputCh <- output
+			return
+		}
+
+		if engine.pools[name] == nil {
+			engine.pools[name] = &WorkerPool{
+				sync.Pool{
+					New: func() interface{} {
+						worker, err := engine.buildWorker(name)
+						if err != nil {
+							return err
+						} else {
+							return worker
+						}
+					},
+				},
+			}
+		}
+
 		worker, err := engine.pools[name].GetWorker()
 		if err != nil {
 			output.Err = err
@@ -63,18 +67,29 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 		}
 		output = <-worker.Work(ctx)
 		outputCh <- output
-		engine.pools[name].Put(worker)
+
+		if worker.version == engine.plans[name].version {
+			engine.pools[name].Put(worker)
+		}
 	}()
 
 	return outputCh
 }
 
-func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
-	if engine.plans[name] == nil {
-		err = fmt.Errorf("plan not found, name: %s", name)
-		return
+func (engine *Engine) UpdatePlan(name string, fastMode bool, update func(plan *Plan) *Plan) {
+	newPlan := update(engine.plans[name])
+	newPlan.version = strconv.FormatInt(time.Now().Unix(), 10)
+	newPlan.graph = nil
+	newPlan.PreparedNodes = nil
+
+	if fastMode {
+		engine.pools[name] = nil
 	}
 
+	engine.plans[name] = newPlan
+}
+
+func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 	plan := engine.plans[name]
 	nodeMap := map[string]Node{}
 
@@ -90,11 +105,17 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 		}
 	}
 
+	preparedNodes := plan.PreparedNodes
+
 	steps, _ := plan.graph.Steps()
 	for _, nodeNames := range steps {
 		for _, nodeName := range nodeNames {
-			if plan.cached && engine.nodeCache[name][nodeName] != nil {
-				nodeMap[nodeName] = engine.nodeCache[name][nodeName].(Cloneable).Clone()
+			if preparedNodes != nil && preparedNodes[nodeName] != nil {
+				if cloneableNode, ok := preparedNodes[nodeName].(Cloneable); ok {
+					nodeMap[nodeName] = cloneableNode.Clone()
+				} else {
+					nodeMap[nodeName] = preparedNodes[nodeName]
+				}
 			} else {
 				nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.Props, "")
 				if err != nil {
@@ -104,19 +125,20 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 		}
 	}
 
-	if !plan.cached {
+	if plan.PreparedNodes == nil {
+		plan.PreparedNodes = make(map[string]Node)
+
 		for nodeName, node := range nodeMap {
 			if _, ok := node.(Cloneable); ok {
-				engine.nodeCache[name][nodeName] = node
+				plan.PreparedNodes[nodeName] = node
 			}
 		}
-
-		plan.cached = true
 	}
 
 	worker = &Worker{
-		steps: steps,
-		nodes: nodeMap,
+		steps:   steps,
+		nodes:   nodeMap,
+		version: plan.version,
 	}
 	return
 }

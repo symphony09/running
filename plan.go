@@ -11,9 +11,11 @@ type Plan struct {
 
 	Options []Option
 
+	PreparedNodes map[string]Node
+
 	graph *DAG
 
-	cached bool
+	version string
 }
 
 func NewPlan(props Props, options ...Option) *Plan {

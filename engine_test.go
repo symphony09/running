@@ -165,6 +165,48 @@ func TestProps(t *testing.T) {
 	fmt.Println(out)
 }
 
+func TestEngine_UpdatePlan(t *testing.T) {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+		node := new(TestNode6)
+		node.SetName(name)
+		chosen, _ := props.Get(name + ".chosen")
+		node.chosen, _ = chosen.(string)
+		node.chosen = name + "." + node.chosen
+		return node
+	})
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+		node := new(TestNode1)
+		node.SetName(name)
+		return node
+	})
+
+	props := running.StandardProps(map[string]interface{}{"A1.chosen": "B2"})
+
+	ops := []running.Option{
+		running.AddNodes("A", "A1"),
+		running.AddNodes("B", "B1", "B2", "B3"),
+		running.MergeNodes("A1", "B1", "B2", "B3"),
+		running.LinkNodes("A1"),
+	}
+
+	plan := running.NewPlan(props, ops...)
+
+	running.Global.RegisterPlan("P2", plan)
+
+	out := <-running.Global.ExecPlan("P2", context.Background())
+
+	fmt.Println(out)
+
+	running.Global.UpdatePlan("P2", true, func(plan *running.Plan) *running.Plan {
+		plan.Props = running.StandardProps(map[string]interface{}{"A1.chosen": "B3"})
+		return plan
+	})
+
+	out = <-running.Global.ExecPlan("P2", context.Background())
+
+	fmt.Println(out)
+}
+
 type TestNode7 struct {
 	running.Base
 }
