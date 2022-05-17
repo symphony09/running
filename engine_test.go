@@ -98,14 +98,20 @@ func TestEngine(t *testing.T) {
 	ops := []running.Option{
 		running.AddNodes("A", "A1", "A2", "A3", "A4", "A5"),
 		running.AddNodes("B", "B1"),
-		running.AddNodes("C", "C1"),
-		running.LinkNodes("B1", "A2", "C1"),
+		running.AddNodes("C", "C1", "C2"),
+		running.LinkNodes("B1", "A2", "C1", "C2"),
 		running.MergeNodes("A3", "A4"),
 		running.MergeNodes("B1", "A1", "A3"),
 		running.MergeNodes("C1", "A4", "A5"),
 	}
 
-	plan := running.NewPlan(running.EmptyProps{}, ops...)
+	c2 := new(TestNode3)
+	c2.SetName("C2")
+	a6 := new(TestNode2)
+	a6.SetName("C2.A6")
+	c2.Inject([]running.Node{a6})
+
+	plan := running.NewPlan(running.EmptyProps{}, []running.Node{c2}, ops...)
 
 	err := running.Global.RegisterPlan("P1", plan)
 	if err != nil {
@@ -160,7 +166,7 @@ func TestProps(t *testing.T) {
 		running.LinkNodes("A1"),
 	}
 
-	plan := running.NewPlan(props, ops...)
+	plan := running.NewPlan(props, nil, ops...)
 
 	err := running.Global.RegisterPlan("P2", plan)
 	if err != nil {
@@ -197,7 +203,7 @@ func TestEngine_UpdatePlan(t *testing.T) {
 		running.LinkNodes("A1"),
 	}
 
-	plan := running.NewPlan(props, ops...)
+	plan := running.NewPlan(props, nil, ops...)
 
 	err := running.Global.RegisterPlan("P2", plan)
 	if err != nil {
@@ -280,7 +286,7 @@ func TestCtx(t *testing.T) {
 		running.LinkNodes("A1"),
 	}
 
-	plan := running.NewPlan(props, ops...)
+	plan := running.NewPlan(props, nil, ops...)
 
 	err := running.Global.RegisterPlan("P3", plan)
 	if err != nil {
@@ -315,7 +321,7 @@ func BenchmarkEngine_ExecPlan(b *testing.B) {
 		running.MergeNodes("B1", "A4"),
 	}
 
-	plan := running.NewPlan(running.EmptyProps{}, ops...)
+	plan := running.NewPlan(running.EmptyProps{}, nil, ops...)
 
 	err := running.Global.RegisterPlan("P1", plan)
 	if err != nil {

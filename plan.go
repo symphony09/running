@@ -11,9 +11,9 @@ import (
 type Plan struct {
 	Props Props
 
-	Options []Option
+	Prebuilt []Node
 
-	Prebuilt map[string]Node
+	Options []Option
 
 	version string
 
@@ -26,9 +26,11 @@ type Plan struct {
 	locker sync.RWMutex
 }
 
-func NewPlan(props Props, options ...Option) *Plan {
+func NewPlan(props Props, prebuilt []Node, options ...Option) *Plan {
 	return &Plan{
 		Props: props,
+
+		Prebuilt: prebuilt,
 
 		Options: options,
 	}
@@ -49,7 +51,11 @@ func (plan *Plan) Init() error {
 	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
 	plan.graph = graph
 	plan.props = plan.Props
-	plan.prebuilt = plan.Prebuilt
+	plan.prebuilt = make(map[string]Node)
+
+	for _, node := range plan.Prebuilt {
+		plan.prebuilt[node.Name()] = node
+	}
 
 	return nil
 }
