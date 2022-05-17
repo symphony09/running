@@ -107,7 +107,11 @@ func TestEngine(t *testing.T) {
 
 	plan := running.NewPlan(running.EmptyProps{}, ops...)
 
-	running.Global.RegisterPlan("P1", plan)
+	err := running.Global.RegisterPlan("P1", plan)
+	if err != nil {
+		t.Errorf("failed to register plan")
+		return
+	}
 
 	out := <-running.Global.ExecPlan("P1", context.Background())
 
@@ -158,7 +162,11 @@ func TestProps(t *testing.T) {
 
 	plan := running.NewPlan(props, ops...)
 
-	running.Global.RegisterPlan("P2", plan)
+	err := running.Global.RegisterPlan("P2", plan)
+	if err != nil {
+		t.Errorf("failed to register plan")
+		return
+	}
 
 	out := <-running.Global.ExecPlan("P2", context.Background())
 
@@ -191,16 +199,23 @@ func TestEngine_UpdatePlan(t *testing.T) {
 
 	plan := running.NewPlan(props, ops...)
 
-	running.Global.RegisterPlan("P2", plan)
+	err := running.Global.RegisterPlan("P2", plan)
+	if err != nil {
+		t.Errorf("failed to register plan")
+		return
+	}
 
 	out := <-running.Global.ExecPlan("P2", context.Background())
 
 	fmt.Println(out)
 
-	running.Global.UpdatePlan("P2", true, func(plan *running.Plan) *running.Plan {
+	err = running.Global.UpdatePlan("P2", true, func(plan *running.Plan) {
 		plan.Props = running.StandardProps(map[string]interface{}{"A1.chosen": "B3"})
-		return plan
 	})
+	if err != nil {
+		t.Errorf("failed to update plan")
+		return
+	}
 
 	out = <-running.Global.ExecPlan("P2", context.Background())
 
@@ -267,7 +282,11 @@ func TestCtx(t *testing.T) {
 
 	plan := running.NewPlan(props, ops...)
 
-	running.Global.RegisterPlan("P3", plan)
+	err := running.Global.RegisterPlan("P3", plan)
+	if err != nil {
+		t.Errorf("failed to register plan")
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
 	defer cancel()
@@ -298,7 +317,11 @@ func BenchmarkEngine_ExecPlan(b *testing.B) {
 
 	plan := running.NewPlan(running.EmptyProps{}, ops...)
 
-	running.Global.RegisterPlan("P1", plan)
+	err := running.Global.RegisterPlan("P1", plan)
+	if err != nil {
+		b.Errorf("failed to register plan")
+		return
+	}
 
 	for i := 0; i < b.N; i++ {
 		_ = <-running.Global.ExecPlan("P1", context.Background())

@@ -3,9 +3,7 @@ package running
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
-	"time"
 )
 
 var Global = &Engine{
@@ -28,9 +26,13 @@ func (engine *Engine) RegisterNodeBuilder(name string, builder BuildNodeFunc) {
 	engine.builders[name] = builder
 }
 
-func (engine *Engine) RegisterPlan(name string, plan *Plan) {
-	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
+func (engine *Engine) RegisterPlan(name string, plan *Plan) error {
+	err := plan.Init()
+	if err != nil {
+		return err
+	}
 	engine.plans[name] = plan
+	return nil
 }
 
 func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
@@ -76,61 +78,49 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 	return outputCh
 }
 
-func (engine *Engine) UpdatePlan(name string, fastMode bool, update func(plan *Plan) *Plan) {
-	newPlan := update(engine.plans[name])
-	newPlan.version = strconv.FormatInt(time.Now().Unix(), 10)
-	newPlan.graph = nil
-	newPlan.PreparedNodes = nil
+func (engine *Engine) UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
+	plan := engine.plans[name]
+
+	plan.locker.Lock()
+	update(plan)
+	plan.locker.Unlock()
+
+	err := plan.Init()
+	if err != nil {
+		return err
+	}
 
 	if fastMode {
 		engine.pools[name] = nil
 	}
 
-	engine.plans[name] = newPlan
+	return nil
 }
 
 func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 	plan := engine.plans[name]
+
+	plan.locker.RLock()
+	defer plan.locker.RUnlock()
+
 	nodeMap := map[string]Node{}
 
-	if plan.graph == nil {
-		plan.graph = newDAG()
-		for _, option := range plan.Options {
-			option(plan.graph)
-		}
-
-		if err = plan.graph.Verify(); err != nil {
-			err = fmt.Errorf("invalid plan, %w", err)
-			return
-		}
-	}
-
-	preparedNodes := plan.PreparedNodes
+	prebuilt := plan.prebuilt
 
 	steps, _ := plan.graph.Steps()
 	for _, nodeNames := range steps {
 		for _, nodeName := range nodeNames {
-			if preparedNodes != nil && preparedNodes[nodeName] != nil {
-				if cloneableNode, ok := preparedNodes[nodeName].(Cloneable); ok {
+			if prebuilt[nodeName] != nil {
+				if cloneableNode, ok := prebuilt[nodeName].(Cloneable); ok {
 					nodeMap[nodeName] = cloneableNode.Clone()
 				} else {
-					nodeMap[nodeName] = preparedNodes[nodeName]
+					nodeMap[nodeName] = prebuilt[nodeName]
 				}
 			} else {
-				nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.Props, "")
+				nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.props, "")
 				if err != nil {
 					return
 				}
-			}
-		}
-	}
-
-	if plan.PreparedNodes == nil {
-		plan.PreparedNodes = make(map[string]Node)
-
-		for nodeName, node := range nodeMap {
-			if _, ok := node.(Cloneable); ok {
-				plan.PreparedNodes[nodeName] = node
 			}
 		}
 	}

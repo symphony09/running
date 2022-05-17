@@ -2,8 +2,10 @@ package running
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Plan struct {
@@ -11,11 +13,17 @@ type Plan struct {
 
 	Options []Option
 
-	PreparedNodes map[string]Node
+	Prebuilt map[string]Node
+
+	version string
 
 	graph *DAG
 
-	version string
+	props Props
+
+	prebuilt map[string]Node
+
+	locker sync.RWMutex
 }
 
 func NewPlan(props Props, options ...Option) *Plan {
@@ -24,6 +32,26 @@ func NewPlan(props Props, options ...Option) *Plan {
 
 		Options: options,
 	}
+}
+
+func (plan *Plan) Init() error {
+	plan.locker.Lock()
+	defer plan.locker.Unlock()
+
+	graph := newDAG()
+	for _, option := range plan.Options {
+		option(graph)
+	}
+	if err := graph.Verify(); err != nil {
+		return fmt.Errorf("invalid plan, %w", err)
+	}
+
+	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
+	plan.graph = graph
+	plan.props = plan.Props
+	plan.prebuilt = plan.Prebuilt
+
+	return nil
 }
 
 type Option func(*DAG)
