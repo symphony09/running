@@ -105,22 +105,12 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 
 	nodeMap := map[string]Node{}
 
-	prebuilt := plan.prebuilt
-
 	steps, _ := plan.graph.Steps()
 	for _, nodeNames := range steps {
 		for _, nodeName := range nodeNames {
-			if prebuilt[nodeName] != nil {
-				if cloneableNode, ok := prebuilt[nodeName].(Cloneable); ok {
-					nodeMap[nodeName] = cloneableNode.Clone()
-				} else {
-					nodeMap[nodeName] = prebuilt[nodeName]
-				}
-			} else {
-				nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.props, "")
-				if err != nil {
-					return
-				}
+			nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.props, "", plan.prebuilt)
+			if err != nil {
+				return
 			}
 		}
 	}
@@ -133,47 +123,71 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 	return
 }
 
-func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string) (Node, error) {
+func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebuilt map[string]Node) (Node, error) {
 	var rootNode Node
-	if builder := engine.builders[root.NodeType]; builder != nil {
-		if prefix != "" {
-			rootNode = builder(prefix+"."+root.NodeName, props)
-		} else {
-			rootNode = builder(root.NodeName, props)
-		}
+	var nodeName string
+
+	if prefix != "" {
+		nodeName = prefix + "." + root.NodeName
+	} else {
+		nodeName = root.NodeName
+	}
+
+	if node := getPrebuiltNode(prebuilt, nodeName); node != nil {
+		rootNode = node
+	} else if builder := engine.builders[root.NodeType]; builder != nil {
+		rootNode = builder(nodeName, props)
 	} else {
 		return nil, fmt.Errorf("no builder found for type %s", root.NodeType)
 	}
 
-	//TODO Output warning
-	if _, ok := rootNode.(Cluster); !ok {
-		return rootNode, nil
+	if cluster, ok := rootNode.(Cluster); ok {
+		var subNodes []Node
+
+		for _, ref := range root.SubRefs {
+			if len(ref.SubRefs) == 0 {
+				var subNode Node
+
+				if node := getPrebuiltNode(prebuilt, rootNode.Name()+"."+ref.NodeName); node != nil {
+					subNode = node
+				} else if builder := engine.builders[ref.NodeType]; builder != nil {
+					subNode = builder(rootNode.Name()+"."+ref.NodeName, props)
+				} else {
+					return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
+				}
+
+				subNodes = append(subNodes, subNode)
+			} else {
+				if prefix == "" {
+					prefix = root.NodeName
+				} else {
+					prefix = prefix + "." + root.NodeName
+				}
+
+				if subNode, err := engine.buildNode(ref, props, prefix, prebuilt); err != nil {
+					return nil, err
+				} else {
+					subNodes = append(subNodes, subNode)
+				}
+			}
+		}
+
+		cluster.Inject(subNodes)
 	}
 
-	var subNodes []Node
-	for _, ref := range root.SubRefs {
-		if len(ref.SubRefs) == 0 {
-			if builder := engine.builders[ref.NodeType]; builder == nil {
-				return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
-			} else {
-				subNode := builder(rootNode.Name()+"."+ref.NodeName, props)
-				subNodes = append(subNodes, subNode)
-			}
-		} else {
-			if prefix == "" {
-				prefix = root.NodeName
-			} else {
-				prefix = prefix + "." + root.NodeName
-			}
-			if subNode, err := engine.buildNode(ref, props, prefix); err != nil {
-				return nil, err
-			} else {
-				subNodes = append(subNodes, subNode)
-			}
+	return rootNode, nil
+}
 
+func getPrebuiltNode(prebuilt map[string]Node, nodeName string) Node {
+	var node Node
+
+	if prebuilt[nodeName] != nil {
+		if cloneableNode, ok := prebuilt[nodeName].(Cloneable); ok {
+			node = cloneableNode.Clone()
+		} else {
+			node = prebuilt[nodeName]
 		}
 	}
 
-	rootNode.(Cluster).Inject(subNodes)
-	return rootNode, nil
+	return node
 }

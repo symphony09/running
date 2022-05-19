@@ -61,7 +61,7 @@ func (base *Base) Name() string {
 }
 
 func (base *Base) Inject(nodes []Node) {
-	base.SubNodes = nodes
+	base.SubNodes = append(base.SubNodes, nodes...)
 }
 
 func (base *Base) Bind(state State) {
