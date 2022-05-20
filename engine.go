@@ -116,7 +116,7 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 	}
 
 	worker = &Worker{
-		steps:   steps,
+		works:   NewWorkList(plan.graph),
 		nodes:   nodeMap,
 		version: plan.version,
 	}

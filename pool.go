@@ -19,7 +19,7 @@ func (pool *WorkerPool) GetWorker() (*Worker, error) {
 }
 
 type Worker struct {
-	steps [][]string
+	works *WorkList
 
 	nodes map[string]Node
 
@@ -31,27 +31,127 @@ func (worker Worker) Work(ctx context.Context) <-chan Output {
 	outputCh := make(chan Output, 1)
 	state := NewStandardState()
 
-	var wg sync.WaitGroup
-
-	for _, nodeNames := range worker.steps {
-		for _, nodeName := range nodeNames {
-			wg.Add(1)
-
+	for nodeName := range worker.works.TODO() {
+		go func(nodeName string) {
 			if statefulNode, ok := worker.nodes[nodeName].(Stateful); ok {
 				statefulNode.Bind(state)
 			}
 
-			go func(nodeName string) {
-				worker.nodes[nodeName].Run(ctx)
+			worker.nodes[nodeName].Run(ctx)
 
-				wg.Done()
-			}(nodeName)
-		}
-
-		wg.Wait()
+			worker.works.Done(nodeName)
+		}(nodeName)
 	}
 
 	output.State = state
 	outputCh <- output
 	return outputCh
+}
+
+type WorkList struct {
+	todo, done chan string
+
+	completed chan struct{}
+
+	Items map[string]*workItem
+}
+
+type workItem struct {
+	Name string
+
+	State int
+
+	Prev int
+
+	Next []*workItem
+}
+
+func NewWorkList(graph *DAG) *WorkList {
+	list := &WorkList{
+		Items: make(map[string]*workItem),
+	}
+
+	for name, vertex := range graph.Vertexes {
+		list.Items[name] = &workItem{
+			Name:  name,
+			State: WorkStateTodo,
+			Prev:  vertex.Prev,
+			Next:  make([]*workItem, 0),
+		}
+	}
+
+	for name, vertex := range graph.Vertexes {
+		for _, next := range vertex.Next {
+			list.Items[name].Next = append(list.Items[name].Next, list.Items[next.RefRoot.NodeName])
+		}
+	}
+
+	return list
+}
+
+func (list *WorkList) TODO() <-chan string {
+	list.todo = make(chan string, len(list.Items))
+	list.done = make(chan string, len(list.Items))
+	list.completed = make(chan struct{}, 1)
+
+	list.feed()
+
+	go func() {
+		for {
+			select {
+			case name := <-list.done:
+				if list.Items[name] == nil {
+					break
+				}
+
+				list.Items[name].State = WorkStateDone
+
+				for _, nextItem := range list.Items[name].Next {
+					nextItem.Prev--
+				}
+
+				list.feed()
+			case <-list.completed:
+				return
+			}
+		}
+	}()
+
+	return list.todo
+}
+
+func (list *WorkList) Done(name string) {
+	list.done <- name
+}
+
+func (list *WorkList) feed() {
+	var hasMoreTodo, hasDoing bool
+
+	for _, item := range list.Items {
+		if item.State == WorkStateTodo && item.Prev <= 0 {
+			hasMoreTodo = true
+			item.State = WorkStateDoing
+			list.todo <- item.Name
+		}
+	}
+
+	if !hasMoreTodo {
+		for _, item := range list.Items {
+			if item.State == WorkStateDoing {
+				hasDoing = true
+			}
+		}
+
+		if !hasDoing {
+			for _, item := range list.Items {
+				item.State = WorkStateTodo
+				for _, nextItem := range item.Next {
+					nextItem.Prev++
+				}
+			}
+
+			list.completed <- struct{}{}
+			close(list.todo)
+		}
+	}
 }
