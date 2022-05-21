@@ -8,6 +8,8 @@ type Node interface {
 	Name() string
 
 	Run(ctx context.Context)
+
+	Reset()
 }
 
 type Cluster interface {
@@ -78,6 +80,16 @@ func (base *Base) Bind(state State) {
 
 func (base *Base) Run(ctx context.Context) {
 	panic("please implement run method")
+}
+
+func (base *Base) Reset() {
+	base.ResetSubNodes()
+}
+
+func (base *Base) ResetSubNodes() {
+	for _, node := range base.SubNodes {
+		node.Reset()
+	}
 }
 
 type Output struct {

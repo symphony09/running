@@ -38,6 +38,7 @@ func (worker Worker) Work(ctx context.Context) <-chan Output {
 			}
 
 			worker.nodes[nodeName].Run(ctx)
+			worker.nodes[nodeName].Reset()
 
 			worker.works.Done(nodeName)
 		}(nodeName)
