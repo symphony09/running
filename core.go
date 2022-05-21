@@ -30,6 +30,8 @@ type Cloneable interface {
 
 type Props interface {
 	Get(key string) (interface{}, bool)
+
+	SubGet(sub, key string) (interface{}, bool)
 }
 
 type BuildNodeFunc func(name string, props Props) (Node, error)
