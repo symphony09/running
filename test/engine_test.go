@@ -1,13 +1,14 @@
-package running_test
+package test
 
 import (
 	"context"
 	"fmt"
 	"math/rand"
-	"running"
 	"sync"
 	"testing"
 	"time"
+
+	"running"
 )
 
 type TestNode1 struct {
