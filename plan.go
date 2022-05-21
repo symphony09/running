@@ -116,6 +116,35 @@ var LinkNodes = func(nodes ...string) Option {
 	}
 }
 
+var SLinkNodes = func(nodes ...string) Option {
+	return func(dag *DAG) {
+		if len(nodes) < 1 {
+			return
+		}
+
+		for _, root := range nodes {
+			if _, ok := dag.Vertexes[root]; !ok {
+				if _, ok := dag.NodeRefs[root]; ok {
+					dag.Vertexes[root] = &Vertex{
+						RefRoot: dag.NodeRefs[root],
+					}
+				}
+			}
+		}
+
+		for i := range nodes {
+			if i < len(nodes)-1 {
+				prev, next := dag.Vertexes[nodes[i]], dag.Vertexes[nodes[i+1]]
+
+				if prev != nil && next != nil {
+					prev.Next = append(prev.Next, next)
+					next.Prev++
+				}
+			}
+		}
+	}
+}
+
 type NodeRef struct {
 	NodeName string
 
