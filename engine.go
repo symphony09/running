@@ -126,6 +126,7 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebuilt map[string]Node) (Node, error) {
 	var rootNode Node
 	var nodeName string
+	var err error
 
 	if prefix != "" {
 		nodeName = prefix + "." + root.NodeName
@@ -136,7 +137,10 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 	if node := getPrebuiltNode(prebuilt, nodeName); node != nil {
 		rootNode = node
 	} else if builder := engine.builders[root.NodeType]; builder != nil {
-		rootNode = builder(nodeName, props)
+		rootNode, err = builder(nodeName, props)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build %s, err=%s", nodeName, err.Error())
+		}
 	} else {
 		return nil, fmt.Errorf("no builder found for type %s", root.NodeType)
 	}
@@ -145,13 +149,16 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 		var subNodes []Node
 
 		for _, ref := range root.SubRefs {
-			if len(ref.SubRefs) == 0 {
-				var subNode Node
+			var subNode Node
 
+			if len(ref.SubRefs) == 0 {
 				if node := getPrebuiltNode(prebuilt, rootNode.Name()+"."+ref.NodeName); node != nil {
 					subNode = node
 				} else if builder := engine.builders[ref.NodeType]; builder != nil {
-					subNode = builder(rootNode.Name()+"."+ref.NodeName, props)
+					subNode, err = builder(rootNode.Name()+"."+ref.NodeName, props)
+					if err != nil {
+						return nil, fmt.Errorf("failed to build %s, err=%s", nodeName, err.Error())
+					}
 				} else {
 					return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
 				}
@@ -164,7 +171,7 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 					prefix = prefix + "." + root.NodeName
 				}
 
-				if subNode, err := engine.buildNode(ref, props, prefix, prebuilt); err != nil {
+				if subNode, err = engine.buildNode(ref, props, prefix, prebuilt); err != nil {
 					return nil, err
 				} else {
 					subNodes = append(subNodes, subNode)

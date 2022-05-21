@@ -79,20 +79,20 @@ func init() {
 }
 
 func TestEngine(t *testing.T) {
-	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode1)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
-	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode2)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
-	running.Global.RegisterNodeBuilder("C", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("C", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode3)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
 
 	ops := []running.Option{
@@ -143,18 +143,18 @@ func (node *TestNode6) Run(ctx context.Context) {
 }
 
 func TestProps(t *testing.T) {
-	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode6)
 		node.SetName(name)
 		chosen, _ := props.Get(name + ".chosen")
 		node.chosen, _ = chosen.(string)
 		node.chosen = name + "." + node.chosen
-		return node
+		return node, nil
 	})
-	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode1)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
 
 	props := running.StandardProps(map[string]interface{}{"A1.chosen": "B2"})
@@ -180,18 +180,18 @@ func TestProps(t *testing.T) {
 }
 
 func TestEngine_UpdatePlan(t *testing.T) {
-	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode6)
 		node.SetName(name)
 		chosen, _ := props.Get(name + ".chosen")
 		node.chosen, _ = chosen.(string)
 		node.chosen = name + "." + node.chosen
-		return node
+		return node, nil
 	})
-	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode1)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
 
 	props := running.StandardProps(map[string]interface{}{"A1.chosen": "B2"})
@@ -264,17 +264,17 @@ func (node *TestNode8) Run(ctx context.Context) {
 }
 
 func TestCtx(t *testing.T) {
-	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode8)
 		node.SetName(name)
 		loop, _ := props.Get(name + ".loop")
 		node.loop, _ = loop.(int)
-		return node
+		return node, nil
 	})
-	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode7)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
 
 	props := running.StandardProps(map[string]interface{}{"A1.loop": 5})
@@ -302,15 +302,15 @@ func TestCtx(t *testing.T) {
 }
 
 func BenchmarkEngine_ExecPlan(b *testing.B) {
-	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode4)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
-	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) running.Node {
+	running.Global.RegisterNodeBuilder("B", func(name string, props running.Props) (running.Node, error) {
 		node := new(TestNode5)
 		node.SetName(name)
-		return node
+		return node, nil
 	})
 
 	ops := []running.Option{
