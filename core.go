@@ -54,6 +54,8 @@ type Base struct {
 	State State
 
 	SubNodes []Node
+
+	SubNodesMap map[string]Node
 }
 
 func (base *Base) SetName(name string) {
@@ -66,6 +68,14 @@ func (base *Base) Name() string {
 
 func (base *Base) Inject(nodes []Node) {
 	base.SubNodes = append(base.SubNodes, nodes...)
+
+	if base.SubNodesMap == nil {
+		base.SubNodesMap = make(map[string]Node)
+	}
+
+	for _, node := range nodes {
+		base.SubNodesMap[node.Name()] = node
+	}
 }
 
 func (base *Base) Bind(state State) {
