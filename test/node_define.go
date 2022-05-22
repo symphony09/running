@@ -2,10 +2,10 @@ package test
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
 	"running"
+	"running/utils"
 )
 
 type BaseTestNode struct {
@@ -14,11 +14,13 @@ type BaseTestNode struct {
 
 func (node *BaseTestNode) Run(ctx context.Context) {
 	start := time.Now()
-	rand.Seed(start.Unix())
-	time.Sleep(time.Duration(rand.Intn(10)) * time.Millisecond)
-	end := time.Now()
 
-	AddLog(node.State, node.Name(), start, end, "", nil)
+	select {
+	case <-time.After(10 * time.Millisecond):
+		utils.AddLog(node.State, node.Name(), start, time.Now(), "success", nil)
+	case <-ctx.Done():
+		utils.AddLog(node.State, node.Name(), start, time.Now(), "timeout", ctx.Err())
+	}
 }
 
 type SetStateNode struct {
@@ -31,5 +33,11 @@ type SetStateNode struct {
 
 func (node *SetStateNode) Run(ctx context.Context) {
 	node.State.Update(node.key, node.value)
-	AddLog(node.State, node.Name(), time.Now(), time.Now(), "", nil)
+	utils.AddLog(node.State, node.Name(), time.Now(), time.Now(), "", nil)
 }
+
+type NothingNode struct {
+	running.Base
+}
+
+func (node *NothingNode) Run(ctx context.Context) {}

@@ -6,6 +6,7 @@ import (
 
 	"running"
 	_ "running/common"
+	"running/utils"
 )
 
 func TestLoopCluster(t *testing.T) {
@@ -40,7 +41,7 @@ func TestLoopCluster(t *testing.T) {
 	if out.Err != nil {
 		t.Errorf("exec plan failed,err=%s", out.Err.Error())
 	} else {
-		sum := GetRunSummary(out.State)
+		sum := utils.GetRunSummary(out.State)
 		t.Logf("plan cost %d ms", sum.Cost.Milliseconds())
 
 		if len(sum.Logs["L1.B1"]) != 0 {
