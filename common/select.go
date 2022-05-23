@@ -41,6 +41,5 @@ func (cluster *SelectCluster) Run(ctx context.Context) {
 	node := cluster.SubNodesMap[cluster.Name()+"."+selected]
 	if node != nil {
 		node.Run(ctx)
-		node.Reset()
 	}
 }

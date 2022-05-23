@@ -67,9 +67,6 @@ func (cluster *LoopCluster) Run(ctx context.Context) {
 			time.Sleep(time.Duration(cluster.wait) * time.Millisecond)
 		}
 	}
-}
 
-func (cluster *LoopCluster) Reset() {
 	cluster.loopCount = 0
-	cluster.ResetSubNodes()
 }
