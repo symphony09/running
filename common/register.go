@@ -8,4 +8,6 @@ func init() {
 	running.Global.RegisterNodeBuilder("Select", NewSelectCluster)
 
 	running.Global.RegisterNodeBuilder("Serial", NewSerialCluster)
+
+	running.Global.RegisterNodeBuilder("Aspect", NewAspectCluster)
 }
