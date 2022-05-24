@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"running"
+	"github.com/symphony09/running"
 )
 
 type AspectCluster struct {

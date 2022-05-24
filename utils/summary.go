@@ -3,7 +3,7 @@ package utils
 import (
 	"time"
 
-	"running"
+	"github.com/symphony09/running"
 )
 
 type RunSummary struct {

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"running"
-	"running/utils"
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/utils"
 )
 
 func TestBase(t *testing.T) {

@@ -1,6 +1,6 @@
 package common
 
-import "running"
+import "github.com/symphony09/running"
 
 func init() {
 	running.Global.RegisterNodeBuilder("Loop", NewLoopCluster)

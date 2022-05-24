@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"running"
-	"running/common"
-	"running/utils"
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/common"
+	"github.com/symphony09/running/utils"
 )
 
 func TestAspectCluster(t *testing.T) {

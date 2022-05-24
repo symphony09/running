@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"running"
+	"github.com/symphony09/running"
 )
 
 type TestNode1 struct {

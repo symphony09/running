@@ -1,8 +1,8 @@
 package test
 
 import (
-	"running"
-	"running/utils"
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/utils"
 )
 
 func init() {

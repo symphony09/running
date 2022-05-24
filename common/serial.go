@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 
-	"running"
+	"github.com/symphony09/running"
 )
 
 type SerialCluster struct {

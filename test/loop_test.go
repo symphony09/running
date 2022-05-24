@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"running"
-	_ "running/common"
-	"running/utils"
+	"github.com/symphony09/running"
+	_ "github.com/symphony09/running/common"
+	"github.com/symphony09/running/utils"
 )
 
 func TestLoopCluster(t *testing.T) {

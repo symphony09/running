@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"running"
-	"running/utils"
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/utils"
 )
 
 func TestSelectCluster(t *testing.T) {

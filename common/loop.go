@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"running"
-	"running/utils"
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/utils"
 )
 
 type LoopCluster struct {

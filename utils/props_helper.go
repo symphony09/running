@@ -1,6 +1,6 @@
 package utils
 
-import "running"
+import "github.com/symphony09/running"
 
 type PropsHelper struct {
 	Props running.Props

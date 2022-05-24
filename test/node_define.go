@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"running"
-	"running/utils"
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/utils"
 )
 
 type BaseTestNode struct {

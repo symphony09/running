@@ -3,8 +3,8 @@ package common
 import (
 	"context"
 
-	"running"
-	"running/utils"
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/utils"
 )
 
 type SelectCluster struct {
