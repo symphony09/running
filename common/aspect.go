@@ -10,13 +10,21 @@ import (
 type AspectCluster struct {
 	running.Base
 
-	Around func(cluster *AspectCluster)
+	HandleAround func(point *JoinPoint)
 
-	Before func(cluster *AspectCluster)
+	HandleBefore func(point *JoinPoint)
 
-	After func(cluster *AspectCluster)
+	HandleAfter func(point *JoinPoint)
 
 	wg sync.WaitGroup
+}
+
+type JoinPoint struct {
+	Ctx context.Context
+
+	State running.State
+
+	Node running.Node
 }
 
 func NewAspectCluster(name string, props running.Props) (running.Node, error) {
@@ -24,47 +32,53 @@ func NewAspectCluster(name string, props running.Props) (running.Node, error) {
 	node.SetName(name)
 
 	around, _ := props.SubGet(name, "around")
-	if method, ok := around.(func(cluster *AspectCluster)); ok {
-		node.Around = method
+	if method, ok := around.(func(point *JoinPoint)); ok {
+		node.HandleAround = method
 	}
 	before, _ := props.SubGet(name, "before")
-	if method, ok := before.(func(cluster *AspectCluster)); ok {
-		node.Before = method
+	if method, ok := before.(func(point *JoinPoint)); ok {
+		node.HandleBefore = method
 	}
 	after, _ := props.SubGet(name, "after")
-	if method, ok := after.(func(cluster *AspectCluster)); ok {
-		node.After = method
+	if method, ok := after.(func(point *JoinPoint)); ok {
+		node.HandleAfter = method
 	}
 
 	return node, nil
 }
 
 func (cluster *AspectCluster) Run(ctx context.Context) {
-	if cluster.Around != nil {
-		cluster.Around(cluster)
-	}
-
-	if cluster.Before != nil {
-		cluster.Before(cluster)
-	}
-
 	for _, node := range cluster.SubNodes {
 		cluster.wg.Add(1)
 
 		go func(node running.Node) {
 			defer cluster.wg.Done()
 
+			point := &JoinPoint{
+				Ctx:   ctx,
+				State: cluster.State,
+				Node:  node,
+			}
+
+			if cluster.HandleAround != nil {
+				cluster.HandleAround(point)
+			}
+
+			if cluster.HandleBefore != nil {
+				cluster.HandleBefore(point)
+			}
+
 			node.Run(ctx)
+
+			if cluster.HandleAfter != nil {
+				cluster.HandleAfter(point)
+			}
+
+			if cluster.HandleAround != nil {
+				cluster.HandleAround(point)
+			}
 		}(node)
 	}
 
 	cluster.wg.Wait()
-
-	if cluster.After != nil {
-		cluster.After(cluster)
-	}
-
-	if cluster.Around != nil {
-		cluster.Around(cluster)
-	}
 }
