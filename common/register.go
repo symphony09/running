@@ -10,4 +10,6 @@ func init() {
 	running.Global.RegisterNodeBuilder("Serial", NewSerialCluster)
 
 	running.Global.RegisterNodeBuilder("Aspect", NewAspectCluster)
+
+	running.Global.RegisterNodeBuilder("Merge", NewMergeCluster)
 }
