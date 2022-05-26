@@ -49,7 +49,7 @@ func (cluster *MergeCluster) Bind(state running.State) {
 	cluster.State = state
 
 	for _, node := range cluster.SubNodes {
-		subState := running.NewStandardState()
+		subState := running.NewOverlayState(state, running.NewStandardState())
 		cluster.subStates = append(cluster.subStates, subState)
 
 		if statefulNode, ok := node.(running.Stateful); ok {
