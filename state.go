@@ -1,6 +1,8 @@
 package running
 
-import "sync"
+import (
+	"sync"
+)
 
 func NewStandardState() *StandardState {
 	return &StandardState{params: map[string]interface{}{}}
@@ -79,4 +81,43 @@ func (state *UnsafeState) Update(key string, value interface{}) {
 
 func (state *UnsafeState) Transform(key string, transform TransformStateFunc) {
 	state.params[key] = transform(state.params[key])
+}
+
+type OverlayState struct {
+	Upper State
+
+	Lower State
+}
+
+func NewOverlayState(lower, upper State) State {
+	return OverlayState{
+		Upper: upper,
+		Lower: lower,
+	}
+}
+
+func (state OverlayState) Query(key string) (value interface{}, exists bool) {
+	if value, exists = state.Upper.Query(key); exists {
+		return
+	} else {
+		value, exists = state.Lower.Query(key)
+		if exists {
+			state.Upper.Update(key, value)
+		}
+		return
+	}
+}
+
+func (state OverlayState) Update(key string, value interface{}) {
+	state.Upper.Update(key, value)
+}
+
+func (state OverlayState) Transform(key string, transform TransformStateFunc) {
+	if value, exists := state.Upper.Query(key); !exists {
+		if value, exists = state.Lower.Query(key); exists {
+			state.Upper.Update(key, value)
+		}
+	}
+
+	state.Upper.Transform(key, transform)
 }

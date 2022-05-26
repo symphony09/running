@@ -109,3 +109,41 @@ func TestBase(t *testing.T) {
 		t.Error("expect B6 run count != 0, but got 0")
 	}
 }
+
+func TestOverlayState(t *testing.T) {
+	upper, lower := running.NewStandardState(), running.NewStandardState()
+	overlay := running.NewOverlayState(lower, upper)
+	helper1, helper2 := utils.ProxyState(overlay), utils.ProxyState(lower)
+
+	lower.Update("a", 1)
+	overlay.Update("b", 1)
+	lower.Update("c", 1)
+	overlay.Transform("c", func(from interface{}) interface{} {
+		x, _ := from.(int)
+		return x + 1
+	})
+
+	if helper1.GetInt("a") != 1 {
+		t.Errorf("expect a = 1, but got %d", helper1.GetInt("a"))
+	}
+
+	if helper2.GetInt("a") != 1 {
+		t.Errorf("expect a = 1, but got %d", helper1.GetInt("a"))
+	}
+
+	if helper1.GetInt("b") != 1 {
+		t.Errorf("expect b = 1, but got %d", helper1.GetInt("b"))
+	}
+
+	if helper2.GetInt("b") != 0 {
+		t.Errorf("expect b = 0, but got %d", helper1.GetInt("b"))
+	}
+
+	if helper1.GetInt("c") != 2 {
+		t.Errorf("expect c = 2, but got %d", helper1.GetInt("c"))
+	}
+
+	if helper2.GetInt("c") != 1 {
+		t.Errorf("expect c = 1, but got %d", helper1.GetInt("c"))
+	}
+}
