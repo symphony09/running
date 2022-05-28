@@ -12,4 +12,6 @@ func init() {
 	running.Global.RegisterNodeBuilder("Aspect", NewAspectCluster)
 
 	running.Global.RegisterNodeBuilder("Merge", NewMergeCluster)
+
+	running.Global.RegisterNodeBuilder("Switch", NewSwitchCluster)
 }
