@@ -30,10 +30,10 @@ func TestSerialCluster(t *testing.T) {
 		t.Errorf("exec plan failed,err=%s", output.Err.Error())
 	} else {
 		sum := utils.GetRunSummary(output.State)
-		if !sum.Logs["Serial1.Base1"][0].End.Before(sum.Logs["Serial1.Base2"][0].Start) {
+		if sum.Logs["Serial1.Base1"][0].End.After(sum.Logs["Serial1.Base2"][0].Start) {
 			t.Error("Base2 start before Base1 end")
 		}
-		if !sum.Logs["Serial1.Base2"][0].End.Before(sum.Logs["Serial1.Base3"][0].Start) {
+		if sum.Logs["Serial1.Base2"][0].End.After(sum.Logs["Serial1.Base3"][0].Start) {
 			t.Error("Base3 start before Base2 end")
 		}
 	}

@@ -48,14 +48,14 @@ func TestBase(t *testing.T) {
 	if sum.Count != 6 {
 		t.Errorf("expect run count = 6, but got %d", sum.Count)
 	}
-	if !sum.Logs["B1"][0].End.Before(sum.Logs["B2"][0].Start) {
+	if sum.Logs["B1"][0].End.After(sum.Logs["B2"][0].Start) {
 		t.Error("B2 start before B1 end")
 	}
-	if !sum.Logs["B2"][0].End.After(sum.Logs["B3"][0].Start) {
+	if sum.Logs["B2"][0].End.Before(sum.Logs["B3"][0].Start) {
 		t.Error("B2 end before B3 start")
 	}
-	if sum.Logs["B4"][0].Msg != "success" {
-		t.Errorf("expect B4 success, but got %s", sum.Logs["B5"][0].Msg)
+	if sum.Logs["B1"][0].Msg != "success" {
+		t.Errorf("expect B1 success, but got %s", sum.Logs["B5"][0].Msg)
 	}
 	if sum.Logs["B5"][0].Msg != "timeout" {
 		t.Errorf("expect B5 timeout, but got %s", sum.Logs["B5"][0].Msg)
