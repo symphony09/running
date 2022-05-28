@@ -14,11 +14,11 @@ type LoopCluster struct {
 
 	loopCount uint
 
-	maxLoop int
+	MaxLoop int
 
-	watch string
+	Watch string
 
-	wait int
+	Wait int
 
 	wg sync.WaitGroup
 }
@@ -28,9 +28,9 @@ func NewLoopCluster(name string, props running.Props) (running.Node, error) {
 
 	node := new(LoopCluster)
 	node.SetName(name)
-	node.maxLoop = helper.SubGetInt(name, "max_loop")
-	node.watch = helper.SubGetString(name, "watch")
-	node.wait = helper.SubGetInt(name, "wait")
+	node.MaxLoop = helper.SubGetInt(name, "max_loop")
+	node.Watch = helper.SubGetString(name, "watch")
+	node.Wait = helper.SubGetInt(name, "wait")
 
 	return node, nil
 }
@@ -39,12 +39,12 @@ func (cluster *LoopCluster) Run(ctx context.Context) {
 	helper := utils.ProxyState(cluster.State)
 
 	for {
-		if cluster.maxLoop > 0 && int(cluster.loopCount) >= cluster.maxLoop {
+		if cluster.MaxLoop > 0 && int(cluster.loopCount) >= cluster.MaxLoop {
 			break
 		}
 
-		if cluster.watch != "" {
-			loop := helper.GetBool(cluster.watch)
+		if cluster.Watch != "" {
+			loop := helper.GetBool(cluster.Watch)
 			if !loop {
 				break
 			}
@@ -63,8 +63,8 @@ func (cluster *LoopCluster) Run(ctx context.Context) {
 		cluster.wg.Wait()
 		cluster.loopCount++
 
-		if cluster.wait > 0 {
-			time.Sleep(time.Duration(cluster.wait) * time.Millisecond)
+		if cluster.Wait > 0 {
+			time.Sleep(time.Duration(cluster.Wait) * time.Millisecond)
 		}
 	}
 

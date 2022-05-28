@@ -10,9 +10,9 @@ import (
 type SelectCluster struct {
 	running.Base
 
-	selected string
+	Selected string
 
-	watch string
+	Watch string
 }
 
 func NewSelectCluster(name string, props running.Props) (running.Node, error) {
@@ -20,8 +20,8 @@ func NewSelectCluster(name string, props running.Props) (running.Node, error) {
 
 	node := new(SelectCluster)
 	node.SetName(name)
-	node.selected = helper.SubGetString(name, "selected")
-	node.watch = helper.SubGetString(name, "watch")
+	node.Selected = helper.SubGetString(name, "selected")
+	node.Watch = helper.SubGetString(name, "watch")
 
 	return node, nil
 }
@@ -30,12 +30,12 @@ func (cluster *SelectCluster) Run(ctx context.Context) {
 	helper := utils.ProxyState(cluster.State)
 	var selected string
 
-	if cluster.watch != "" {
-		selected = helper.GetString(cluster.watch)
+	if cluster.Watch != "" {
+		selected = helper.GetString(cluster.Watch)
 	}
 
-	if selected == "" && cluster.selected != "" {
-		selected = cluster.selected
+	if selected == "" && cluster.Selected != "" {
+		selected = cluster.Selected
 	}
 
 	node := cluster.SubNodesMap[cluster.Name()+"."+selected]
