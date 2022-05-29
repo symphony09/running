@@ -14,6 +14,22 @@ var Global = &Engine{
 	pools: map[string]*WorkerPool{},
 }
 
+func RegisterNodeBuilder(name string, builder BuildNodeFunc) {
+	Global.RegisterNodeBuilder(name, builder)
+}
+
+func RegisterPlan(name string, plan *Plan) error {
+	return Global.RegisterPlan(name, plan)
+}
+
+func ExecPlan(name string, ctx context.Context) <-chan Output {
+	return Global.ExecPlan(name, ctx)
+}
+
+func UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
+	return Global.UpdatePlan(name, fastMode, update)
+}
+
 type Engine struct {
 	builders map[string]BuildNodeFunc
 
