@@ -1,183 +1,117 @@
 # Running
 
-## What is running
+## Running 是什么
 
-Running 是一个基于 DAG 的 golang 图化执行框架。
+Running 是一个基于 DAG 的 Golang 图化执行框架。
 
-目标是实现方便，灵活地切换算子的组合方式和执行顺序，并发挥 golang 的并发优势。
+目标是实现方便，灵活地切换算子的组合方式和执行顺序，并发挥 Golang 的并发优势。
 
-## How to start
+### 特点
 
-大体可以分为 5 个步骤：
+- 定义 Node，定义 plan，执行 plan 三步走
+- 内置基本实现，目标开箱即用
+- 可以并行执行的就并行执行，目标高性能
+- 无任何第三方依赖，目标稳定可靠
 
-1. 定义节点（define node） 
-2. 注册节点（register node）
-3. 定义计划（define plan）
-4. 注册计划（register plan） 
-5. 执行计划（execute plan）
+## 使用说明
 
-### Example
+### 简单使用
 
-test/engine_test.go 展示了 running  的基本用法，感兴趣的话可以查看源码和尝试执行。
-
-下面以 engine_test.go 中代码为例说明 5 个步骤如何完成。
-
-#### 1. 定义节点示例
+#### 示例代码
 
 ```go
-type TestNode1 struct {
-	running.Base
-}
+package example
 
-func (node *TestNode1) Run(ctx context.Context) {
-	fmt.Printf("Single Node %s running\n", node.Base.NodeName)
-	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
-	fmt.Printf("Single Node %s stopped\n", node.Base.NodeName)
-}
-```
+import (
+	"context"
+	"fmt"
+	"log"
 
-这是最简单的一个 node 定义，
+	"github.com/symphony09/running"
+	"github.com/symphony09/running/common"
+)
 
-它的功能是模拟一个 5s 内的工作负载，并在开始和结束打印提示信息。
+func BaseUsage() {
+	running.RegisterNodeBuilder("Greet",
+		common.NewSimpleNodeBuilder(func(ctx context.Context) {
+			fmt.Println("Hello!")
+		}))
 
-#### 2. 注册节点示例
+	running.RegisterNodeBuilder("Introduce",
+		common.NewSimpleNodeBuilder(func(ctx context.Context) {
+			fmt.Println("This is", ctx.Value("name"), ".")
+		}))
 
-```go
-running.Global.RegisterNodeBuilder("A", func(name string, props running.Props) (running.Node, error) {
-	node := new(TestNode1)
-	node.SetName(name)
-	return node, nil
-})
-```
+	err := running.RegisterPlan("Plan1",
+		running.NewPlan(nil, nil,
+			running.AddNodes("Greet", "Greet1"),
+			running.AddNodes("Introduce", "Introduce1"),
+			running.SLinkNodes("Greet1", "Introduce1")))
 
-这样就可以在 running 中通过 A 这个名字引用 TestNode1
-
-**注意**：注册的是节点的构建函数，而非节点本身
-
-#### 3. 定义计划示例
-
-```go
-ops := []running.Option{
-		running.AddNodes("A", "A1", "A2", "A3", "A4", "A5"),
-		running.AddNodes("B", "B1"),
-		running.AddNodes("C", "C1", "C2"),
-		running.LinkNodes("B1", "A2", "C1", "C2"),
-		running.MergeNodes("A3", "A4"),
-		running.MergeNodes("B1", "A1", "A3"),
-		running.MergeNodes("C1", "A4", "A5"),
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-c2 := new(TestNode3)
-c2.SetName("C2")
-a6 := new(TestNode2)
-a6.SetName("C2.A6")
-c2.Inject([]running.Node{a6})
+	ctx := context.WithValue(context.Background(), "name", "RUNNING")
 
-plan := running.NewPlan(running.EmptyProps{}, []running.Node{c2}, ops...)
+	<-running.ExecPlan("Plan1", ctx)
+}
+
 ```
 
-计划（Plan）由节点初始化属性（Props），预建节点（Prebuilt）和节点操作（Options）组成。
+#### 输出
 
-**Props** 存放初始化节点所需要的属性
-
-running 提供了几类基本实现，如示例中的 EmptyProps，而 StandardProps 则是更实用的实现。
-
-这里不作展开，详细说明见下文核心概念 Props 部分。
-
-**Prebuilt** 存放预先创建好的节点
-
-如果节点创建比较耗时，可以提供预建节点，引擎会复用这些预先创建好的节点。
-
-在预建节点实现了 Clone 方法的情况下，引擎会优先使用预建节点的克隆，否则直接使用节点。
-
-**Option** 存放定义了一组操作，决定了节点的组织方式，总共有四种
-
-- AddNodes
-
-表示添加节点，第一个参数表示节点类型，其后则为实例命名
-
-如`running.AddNodes("A", "A1", "A2", "A3", "A4", "A5")`
-
-这行代码表示添加 5 个 A 类型节点，分别命名为 "A1", "A2", "A3", "A4", "A5"。
-
-- LinkNodes
-
-表示连接节点，第一个参数表示的节点连接其后所有节点，用于表达节点间的依赖关系
-
-如 `running.LinkNodes("B1", "A2", "C1")`表示 B1 同时连接 A2，C1。
-
-- SLinkNodes
-
-与 LinkNodes 相似，但是节点之间是从头到尾串行连接
-
-这表达了 A2，C1两个节点依赖 B1 节点，只有 B1 运行完成后 A2，C1才能开始运行。
-
-- MergeNodes
-
-表示合并节点，第二个参数开始代表的节点会合并为第一个的子节点
-
-如`running.MergeNodes("B1", "A1", "A3")`，表示将 A1，A3 作为 B1 的子节点
-
-B1 在运行时可以获取到 A1，A3 节点并决定是否及何时运行他们
-
-**注意**：
-
-- 通个节点实例可以被多次合并，在这种情况下它可能会被不同节点调用运行多次
-- 被连接的实例也可以被合并，在这种情况下它可能会被运行多次
-  - 前置依赖完成后被直接调用运行
-  - 被节点调用运行
-
-#### 4. 注册计划示例
-
-```go
-running.Global.RegisterPlan("P1", plan)
+```
+Hello!
+This is RUNNING .
 ```
 
-与注册节点类似，表示把定义的 plan 注册为 P1，之后就可以在 running 中通过 P1 这个名字引用定义好的 plan。
+#### 说明
 
-#### 5. 执行计划示例
+示例代码做了以下几件事：
 
-```go
-out := <-running.Global.ExecPlan("P1", context.Background())
+1. 注册 Greet，Introduce 两个 Node 构建函数
 
-fmt.Println(out)
-```
+**Node 是引擎的执行单位**，引擎会管理 Node 的构建和执行。所以需要注册 Node 的构建函数，而不是具体的 Node。
 
-`ExecPlan`传入两个参数，一个是计划名，另一个会作为节点运行的上下文信息传递给 Run 方法。
+`common.NewSimpleNodeBuilder` 接受一个签名为 `func(ctx context.Context)` 的函数，返回 SimpleNode 的构建函数。
 
-此方法返回一个 Chan 通道，用于返回最终的执行状态数据。这个执行状态数据是什么后面再讲。
+SimpleNode 是引擎的一个内置 Node 实现。
 
-#### 6× 更新计划示例
 
-```go
-err = running.Global.UpdatePlan("P2", true, func(plan *running.Plan) {
-		plan.Props = running.StandardProps(map[string]interface{}{"A1.chosen": "B3"})
-})
-```
+NewSimpleNodeBuilder 接受的函数会封装在 SimpleNode 内，引擎执行 SimpleNode  时就会调用此函数。
 
-第一个参数表示 plan 名，第二个表示需要立即生效（这会清空 worker 池，可能造成短时间内负载快速升高）
+2. 注册 Plan1
 
-第三个参数则是更新函数，获取原 plan 并进行更新
+**Plan 是引擎的执行规划**，有了封装了运算逻辑的 Node 后，就可以规划如何执行 Node 了。
 
-更新 plan 可能会由于节点存在死环而失败，这不会影响 plan 按原来方式执行，但是 plan 更新的字段不会回退。
+这里先忽略`running.NewPlan` 的前两个参数，第三个参数开始是不定长参数，定义了一系列操作：
 
-## More
+- AddNodes：添加 Node
 
-### 核心概念
+  - 第一个参数是 Node 类型，对应之前注册的 Node 构建函数
+  - 第二个参数开始是不定长参数，对应具体 Node 的名字。几个名字，就对应几个 Node。
+- SLinkNodes：不定长参数，将添加的 Node 串行连接起来
 
-#### Node
+示例代码的 plan 可以简单表示为 Greet1 -> Introduce1
 
-Node 是对运算逻辑的封装，即算子。Node 可以包含其他 Node，在 running 中称为 Cluster（簇）。
+Greet1 由 Greet 对应的构建函数构建，执行时输出 Hello!
 
-从示例中可以知道，算子的运行时机有两种：
+Introduce1 由 Introduce 对应的构建函数构建，执行时输出 This is 加上上下文参数中的 name 值。
 
-一种是 running 引擎判断依赖解决后调用，一种是被作为簇的一部分调用。
+3. 执行 Plan1
 
-第一种简单通用，第二种则可以定制更复杂的运行逻辑。
+在 plan 注册完成后就可以在任意时机，执行任意次数 plan。
 
-如循环执行某个节点，或根据条件选取某个节点执行，这样的执行逻辑用依赖关系表达是比较困难的。
+`running.ExecPlan` 接受两个参数。一个是 Plan 名，另一个是执行的上下文参数，上下文参数会由引擎传递给 Node 的运行函数。
 
-相关接口定义如下：
+ExecPlan 会立即返回一个通道，真正的执行逻辑是异步执行的，最后将结果通过通道返回。
+
+### 自定义 Node
+
+当引擎内置的 Node 实现不能满足需要时，可以自定义 Node 使用。
+
+Node 接口定义：
 
 ```go
 type Node interface {
@@ -187,7 +121,160 @@ type Node interface {
 
 	Reset()
 }
+```
 
+Node 接口共三个方法，分别用于获取 Node 名，执行运行逻辑，重置 Node 状态。
+
+重置方法在当次计划执行过程中 Node 不会再执行时调用。引擎不会每次都创建新的 Node 来执行计划，所以需要通过重置方法来初始化 Node。
+
+#### 示例代码
+
+```go
+type IntroduceNode struct {
+	running.Base
+
+	Words string
+}
+
+func NewIntroduceNode(name string, props running.Props) (running.Node, error) {
+	node := new(IntroduceNode)
+	node.SetName(name)
+
+	helper := utils.ProxyProps(props)
+	node.Words = helper.SubGetString(name, "words")
+
+	return node, nil
+}
+
+func (i *IntroduceNode) Run(ctx context.Context) {
+	fmt.Println(i.Words)
+}
+
+func BaseUsage02() {
+	running.RegisterNodeBuilder("Greet",
+		common.NewSimpleNodeBuilder(func(ctx context.Context) {
+			fmt.Println("Hello!")
+		}))
+
+	running.RegisterNodeBuilder("Introduce", NewIntroduceNode)
+
+	props := running.StandardProps(map[string]interface{}{
+		"Introduce1.words": "This is RUNNING .",
+	})
+
+	err := running.RegisterPlan("Plan2",
+		running.NewPlan(props, nil,
+			running.AddNodes("Greet", "Greet1"),
+			running.AddNodes("Introduce", "Introduce1"),
+			running.SLinkNodes("Greet1", "Introduce1")))
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	ctx := context.Background()
+
+	<-running.ExecPlan("Plan2", ctx)
+}
+```
+
+#### 输出
+
+```go
+Hello!
+This is RUNNING .
+```
+
+#### 说明
+
+有几点需要说明：
+
+- IntroduceNode 不需要实现 Name 和 Reset 是因为嵌入的 running.Base 已经实现了，SetName 也是 running.Base 实现的。
+- Props 用于为 Node 构建函数提供构建参数
+  - 引擎内置了一个基于 Map 的 Props 实现，即 StandardProps，Key 格式为 Node 名 + “.” + 参数名
+  - utils.ProxyProps 用于简化参数类型断言
+
+### 更复杂的 Plan
+
+上文提到了 AddNodes 和 SLinkNodes，除了这两种引擎还支持 MergeNodes 和 LinkNodes。
+
+- MergeNodes ：将一些 Node 合并为 一个 Node 的 子 Node，子 Node 如何执行由父 Node 决定。
+- LinkNodes：与 SLinkNodes 类似，但连接方式略有不同，LinkNodes 是将其他 Node 同时作为一个 Node的后继。
+
+#### 示例代码
+
+```go
+func BaseUsage03() {
+	running.RegisterNodeBuilder("Greet",
+		common.NewSimpleNodeBuilder(func(ctx context.Context) {
+			fmt.Println("Hello!")
+		}))
+
+	running.RegisterNodeBuilder("Bye",
+		common.NewSimpleNodeBuilder(func(ctx context.Context) {
+			fmt.Println("bye!")
+		}))
+
+	running.RegisterNodeBuilder("Introduce", NewIntroduceNode)
+
+	ops := []running.Option{
+		running.AddNodes("Greet", "Greet1"),
+		running.AddNodes("Bye", "Bye1"),
+		running.AddNodes("Introduce", "Introduce1", "Introduce2", "Introduce3"),
+		running.AddNodes("Select", "Select1"),
+		running.MergeNodes("Select1", "Introduce2", "Introduce3"),
+		running.LinkNodes("Greet1", "Select1", "Introduce1"),
+		running.SLinkNodes("Introduce1", "Bye1"),
+		running.SLinkNodes("Select1", "Bye1"),
+	}
+
+	props := running.StandardProps(map[string]interface{}{
+		"Introduce1.words":         "This is RUNNING .",
+		"Select1.Introduce2.words": "A good day .",
+		"Select1.Introduce3.words": "A terrible day .",
+		"Select1.selected":         "Introduce2",
+	})
+
+	err := running.RegisterPlan("Plan3", running.NewPlan(props, nil, ops...))
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	ctx := context.Background()
+
+	<-running.ExecPlan("Plan3", ctx)
+}
+```
+
+#### 输出
+
+```
+Hello!
+This is RUNNING .
+A good day .
+bye!
+```
+
+#### 说明
+
+程序执行流程如下：
+
+Greet1 -> Introduce1 ->  Select1.Introduce2 -> Bye1
+
+或
+
+Greet1 ->  Select1.Introduce2 -> Introduce1 -> Bye1
+
+示例代码中，Select 是在引入 common 包时自动注册的 Node，Select  可以合并其他 Node，称为 Cluster （簇）。
+
+Select 会根据 props 传入的参数，从合并的 Node 中选择 Node 执行。
+
+### 自定义 Cluster
+
+Cluster 接口定义：
+
+```go
 type Cluster interface {
 	Node
 
@@ -195,124 +282,9 @@ type Cluster interface {
 }
 ```
 
-Run 在 Node 执行时调用，Reset 在 Node 不会再被执行时调用
-
-由于引擎并不会在每次执行计划时都重新创建 Node，所以需要保证本次 Node 调用完成后通过重置回到初始状态。
-
-为 Node 实现 Inject 方法，引擎就会根据 plan 为 Node 注入子 Node。怎么使用这些 Node 是 Cluster 需要解决的问题。
-
-#### Props
-
-props 用于提供 Node 的初始化参数，通过 plan 传递给引擎，引擎再传递给 Node 的构造函数。
-
-相关定义如下：
+Inject 方法用于引擎根据 plan 注入子 Node，嵌入 running.Base 可以自动实现此方法
 
 ```go
-type Props interface {
-	Get(key string) (interface{}, bool)
-
-	SubGet(sub, key string) (interface{}, bool)
-}
-
-type BuildNodeFunc func(name string, props Props) (Node, error)
-```
-
-以 引擎提供的 StandardProps 实现为例，使用方法如下：
-
-```go
-// 约定 A1 节点的 chosen 属性为 B1，使 A1 选择子节点 B1
-props := running.StandardProps(map[string]interface{}{"A1.chosen": "B2"})
-
-// A1 节点的构造函数读取 props，进行初始化
-func(name string, props running.Props) (running.Node, error) {
-	node := new(TestNode6)
-	node.SetName(name)
-	chosen, _ := props.Get(name + ".chosen")
-	node.chosen, _ = chosen.(string)
-	node.chosen = name + "." + node.chosen // A1.B1
-	return node, nil
-}
-
-// A1 节点运行时从子节点中 选择 A1.B1 运行
-func (node *TestNode6) Run(ctx context.Context) {
-	fmt.Printf("Cluster %s running\n", node.Name())
-
-	for _, subNode := range node.Base.SubNodes {
-		if subNode.Name() == node.chosen {
-			subNode.Run(ctx)
-		}
-	}
-
-	fmt.Printf("Cluster %s stopped\n", node.Name())
-}
-```
-
-utils 包提供了一些辅助方法可以简化读取 props ，如：
-
-```go
-helper := utils.ProxyProps(props)
-node.wait = helper.SubGetString(name, "chosen")
-```
-
-#### State
-
-state 用于存储 Node 运行过程中产生的数据，通过 state 可以实现 Node 之间的通信，state 是并发安全的。
-
-相关定义如下：
-
-```go
-type Stateful interface {
-	Node
-
-	Bind(state State)
-}
-
-type State interface {
-   Query(key string) (interface{}, bool)
-
-   Update(key string, value interface{})
-
-   Transform(key string, transform TransformStateFunc)
-}
-
-type TransformStateFunc func(from interface{}) interface{}
-```
-
-为 Node 实现 Bind 方法，引擎就会为 Node 绑定 state，这个 state 也会作为 ExecPlan 的执行结果输出，也就是上文提到的执行状态数据。
-
-Query 方法用于查询某个键的值，Update 方法用于更新某个键的值，Transform 方法用于把旧值通过某种方式转换为新值，一般在需要部分更新某个键的值时使用，如在原数组基础上追加元素。
-
-与 props 一样，utils 包提供了一些辅助方法可以简化读取 state
-
-```go
-value := utils.ProxyState(output.State).GetString("test_key")
-```
-
-
-
-#### running.Base
-
-running 内置了一些基础接口实现，便于用户使用。比如 running.Base：
-
-```go
-type Base struct {
-	NodeName string
-
-	State State
-
-	SubNodes []Node
-
-	SubNodesMap map[string]Node
-}
-
-func (base *Base) SetName(name string) { // 辅助方法
-	base.NodeName = name
-}
-
-func (base *Base) Name() string {
-	return base.NodeName
-}
-
 func (base *Base) Inject(nodes []Node) {
 	base.SubNodes = append(base.SubNodes, nodes...)
 
@@ -324,7 +296,29 @@ func (base *Base) Inject(nodes []Node) {
 		base.SubNodesMap[node.Name()] = node
 	}
 }
+```
 
+嵌入 running.Base 的结构体可以间接通过 Base 获取 SubNodes 和 SubNodesMap 字段，从而执行这些 Node。
+
+具体实现方法可以参考 common 包下的源码。
+
+### Node 间通信
+
+在引擎中，Node 间通过 State 通信，执行完成后 State 也会作为 ExecPlan 的执行结果从通道返回。
+
+要使用 State，Node 需要实现 Stateful 接口：
+
+```go
+type Stateful interface {
+	Node
+
+	Bind(state State)
+}
+```
+
+Bind 用于引擎为 Node 绑定状态，嵌入 running.Base 可以自动实现此方法。
+
+```go
 func (base *Base) Bind(state State) {
 	base.State = state
 
@@ -334,58 +328,155 @@ func (base *Base) Bind(state State) {
 		}
 	}
 }
+```
 
-func (base *Base) Run(ctx context.Context) { // 包含 Base 的 Node 必须实现 Run 方法
-	panic("please implement run method")
-}
+嵌入 running.Base 的结构体可以间接通过 Base 获取 State 字段，从而读取和写入 State。
 
-func (base *Base) Reset() {
-	base.ResetSubNodes()
-}
+State 定义如下：
 
-func (base *Base) ResetSubNodes() { // 辅助方法
-	for _, node := range base.SubNodes {
-		node.Reset()
-	}
+```go
+type State interface {
+	Query(key string) (interface{}, bool)
+
+	Update(key string, value interface{})
+
+	Transform(key string, transform TransformStateFunc)
 }
 ```
 
-在示例代码中也用到了它。在Node 中嵌入 running.Base 后，就不必再实现 SetName，Name，Inject，Bind方法，可以大量减少重复代码。
+分别用于查询 State，更新 State 和转换 State，引擎内置了 并发安全的 StandardState 实现。
 
-运行时直接通过 Base 获取 NodeName，State和 SubNodes。比如将TestNode1 修改为：
+#### 示例代码
 
 ```go
-type TestNode1 struct {
+type Counter struct {
 	running.Base
 }
 
-func (node *TestNode1) Run(ctx context.Context) {
-	fmt.Printf("Single Node %s running\n", node.Base.NodeName)
-	node.Base.State.Update("time", time.Now().Format("2006-01-02"))
-	t, _ := node.Base.State.Query("time")
-	fmt.Println(t)
-	fmt.Printf("Single Node %s stopped\n", node.Base.NodeName)
+func (node *Counter) Run(ctx context.Context) {
+	node.State.Transform("count", func(from interface{}) interface{} {
+		if from == nil {
+			return 1
+		}
+		if count, ok := from.(int); ok {
+			count++
+			return count
+		} else {
+			return from
+		}
+	})
+}
+
+type Reporter struct {
+	running.Base
+}
+
+func (node *Reporter) Run(ctx context.Context) {
+	count, _ := node.State.Query("count")
+	fmt.Printf("count = %d\n", count)
+}
+
+func BaseUsage04() {
+	running.RegisterNodeBuilder("Counter", func(name string, props running.Props) (running.Node, error) {
+		node := new(Counter)
+		node.SetName(name)
+		return node, nil
+	})
+
+	running.RegisterNodeBuilder("Reporter", func(name string, props running.Props) (running.Node, error) {
+		node := new(Reporter)
+		node.SetName(name)
+		return node, nil
+	})
+
+	ops := []running.Option{
+		running.AddNodes("Counter", "Counter1"),
+		running.AddNodes("Reporter", "Reporter1"),
+		running.AddNodes("Loop", "Loop1"),
+		running.MergeNodes("Loop1", "Counter1"),
+		running.SLinkNodes("Loop1", "Reporter1"),
+	}
+
+	props := running.StandardProps(map[string]interface{}{
+		"Loop1.max_loop": 3,
+	})
+
+	err := running.RegisterPlan("Plan4", running.NewPlan(props, nil, ops...))
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	ctx := context.Background()
+
+	<-running.ExecPlan("Plan4", ctx)
 }
 ```
 
-则输出变为：
+#### 输出
 
 ```
-Single Node B1.A1 running
-2022-05-08
-Single Node B1.A1 stopped
+count = 3
 ```
 
-其他内置实现见 common 包及对应 test 代码
+#### 说明
 
-## Roadmap
+Loop 也是 common 包内定义的 cluster，可以按 props 中的 max_loop 参数循环执行子Node。
 
-目前项目还在初期开发阶段，还有许多工作需要完成，这里先挖个坑
+Loop1 的 max_loop 参数设为 3，则 Counter1 最多循环执行 3 次。
 
-- [x] 增加测试代码
-- [x] 支持更新 Plan
-- [ ] 支持自定义 Engine，增加日志插件
-- [ ] Plan 执行统计数据透出
-- [ ] Worker 池优化
+Counter1 执行时将 count 写入 State，而 Reporter1 执行时从 State 读取 count 并打印。
 
-另外，项目的实现心得我会更新到博客上，👉[博客地址](https://symphony09.github.io/)
+utils 包也有简化 State 类型断言的 helper。
+
+ExecPlan 返回的通道的基础类型为 <-chan Output，Output 定义如下：
+
+```go
+type Output struct {
+	Err error
+
+	State State
+}
+```
+
+如果 plan 顺利执行，引擎会把 State 透出供外部代码使用。
+
+### 更新 Plan
+
+更新函数为`running.UdatePlan`，签名为 `func UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error`
+
+第一个参数为要更新的 plan 名，第二个参数设置是否快速生效，如果设为 true 即快速生效，Worker 池会被清空，第三个参数则是 plan 的具体更新函数。
+
+### 预建 Node
+
+有时，构建 Node 的成本是高昂的，虽然引擎已经通过 Worker 池复用 Node 来减小开销，
+
+但是在需要新建 Worker 的情况下，还是会存在开销过大的问题，这在 plan 执行次数还比较少时或突然加快执行频率时会比较突出。
+
+为了解决这个问题，引擎支持从 plan 中获取预先构建好的 Node 的复制而不是重新构建 Node 来减小构建开销。
+
+`running.NewPlan` 的第二个参数用于接收预建 Node 数组。如：
+
+```
+c2 := new(TestNode3)
+c2.SetName("C2")
+a6 := new(TestNode2)
+a6.SetName("C2.A6")
+c2.Inject([]running.Node{a6})
+
+plan := running.NewPlan(running.EmptyProps{}, []running.Node{c2}, ops...)
+```
+
+要注意的是，多个复制而来的 Node 之间可能通过指针相互影响，这通常不是我们所期望的。
+
+所以最好为预建 Node 实现 Cloneable 接口：
+
+```go
+type Cloneable interface {
+	Node
+
+	Clone() Node
+}
+```
+
+这样引擎就会调用预建 Node 的 Clone 方法获取克隆Node，而不是直接浅拷贝预建 Node。
