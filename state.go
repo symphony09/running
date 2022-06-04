@@ -89,6 +89,7 @@ type OverlayState struct {
 	Lower State
 }
 
+// NewOverlayState return a OverlayState, isolate writes and updates
 func NewOverlayState(lower, upper State) State {
 	return OverlayState{
 		Upper: upper,

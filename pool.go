@@ -12,8 +12,10 @@ type WorkerPool struct {
 func (pool *WorkerPool) GetWorker() (*Worker, error) {
 	got := pool.Get()
 	if worker, ok := got.(*Worker); ok {
+		// return a worker from pool
 		return worker, nil
 	} else {
+		// return error while building worker
 		return nil, got.(error)
 	}
 }
@@ -31,6 +33,7 @@ func (worker Worker) Work(ctx context.Context) <-chan Output {
 	outputCh := make(chan Output, 1)
 	state := NewStandardState()
 
+	// get node ready to run from a chan of works, block until all node done
 	for nodeName := range worker.works.TODO() {
 		go func(nodeName string) {
 			if statefulNode, ok := worker.nodes[nodeName].(Stateful); ok {
@@ -95,6 +98,7 @@ func (list *WorkList) TODO() <-chan string {
 	list.done = make(chan string, len(list.Items))
 	list.completed = make(chan struct{}, 1)
 
+	// find node ready to run
 	list.feed()
 
 	go func() {
@@ -105,14 +109,16 @@ func (list *WorkList) TODO() <-chan string {
 					break
 				}
 
+				// mark node done
 				list.Items[name].State = WorkStateDone
 
 				for _, nextItem := range list.Items[name].Next {
 					nextItem.Prev--
 				}
 
+				// find node ready to run
 				list.feed()
-			case <-list.completed:
+			case <-list.completed: // all node done, exit
 				return
 			}
 		}
@@ -128,6 +134,7 @@ func (list *WorkList) Done(name string) {
 func (list *WorkList) feed() {
 	var hasMoreTodo, hasDoing bool
 
+	// send node ready to run
 	for _, item := range list.Items {
 		if item.State == WorkStateTodo && item.Prev <= 0 {
 			hasMoreTodo = true
@@ -136,6 +143,7 @@ func (list *WorkList) feed() {
 		}
 	}
 
+	// node not found
 	if !hasMoreTodo {
 		for _, item := range list.Items {
 			if item.State == WorkStateDoing {
@@ -143,6 +151,10 @@ func (list *WorkList) feed() {
 			}
 		}
 
+		// if no nodes are running as well, work is over
+		// reset all state,
+		// notify goroutine to exits,
+		// close chan, end the block.
 		if !hasDoing {
 			for _, item := range list.Items {
 				item.State = WorkStateTodo

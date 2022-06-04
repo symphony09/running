@@ -14,18 +14,24 @@ var Global = &Engine{
 	pools: map[string]*WorkerPool{},
 }
 
+// RegisterNodeBuilder register node builder to Global
 func RegisterNodeBuilder(name string, builder BuildNodeFunc) {
 	Global.RegisterNodeBuilder(name, builder)
 }
 
+// RegisterPlan register plan to Global
 func RegisterPlan(name string, plan *Plan) error {
 	return Global.RegisterPlan(name, plan)
 }
 
+// ExecPlan exec plan register in Global
 func ExecPlan(name string, ctx context.Context) <-chan Output {
 	return Global.ExecPlan(name, ctx)
 }
 
+// UpdatePlan update plan register in Global.
+// if fastMode is true, the new plan will take effect immediately,
+// otherwise, the new workers will gradually replace the old workers.
 func UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
 	return Global.UpdatePlan(name, fastMode, update)
 }
@@ -38,10 +44,12 @@ type Engine struct {
 	pools map[string]*WorkerPool
 }
 
+// RegisterNodeBuilder register node builder to engine
 func (engine *Engine) RegisterNodeBuilder(name string, builder BuildNodeFunc) {
 	engine.builders[name] = builder
 }
 
+// RegisterPlan register plan to engine
 func (engine *Engine) RegisterPlan(name string, plan *Plan) error {
 	err := plan.Init()
 	if err != nil {
@@ -51,6 +59,7 @@ func (engine *Engine) RegisterPlan(name string, plan *Plan) error {
 	return nil
 }
 
+// ExecPlan exec plan register in engine
 func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 	output := Output{}
 	outputCh := make(chan Output, 1)
@@ -62,6 +71,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			return
 		}
 
+		// set worker pool for new plan
 		if engine.pools[name] == nil {
 			engine.pools[name] = &WorkerPool{
 				sync.Pool{
@@ -77,6 +87,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			}
 		}
 
+		// get worker from pool and work
 		worker, err := engine.pools[name].GetWorker()
 		if err != nil {
 			output.Err = err
@@ -86,6 +97,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 		output = <-worker.Work(ctx)
 		outputCh <- output
 
+		// if the plan has not been updated, reuse the worker
 		if worker.version == engine.plans[name].version {
 			engine.pools[name].Put(worker)
 		}
@@ -94,6 +106,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 	return outputCh
 }
 
+// UpdatePlan update plan register in engine
 func (engine *Engine) UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
 	plan := engine.plans[name]
 
@@ -106,6 +119,7 @@ func (engine *Engine) UpdatePlan(name string, fastMode bool, update func(plan *P
 		return err
 	}
 
+	// in fast mode, drop the old worker pool
 	if fastMode {
 		engine.pools[name] = nil
 	}
@@ -121,6 +135,7 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 
 	nodeMap := map[string]Node{}
 
+	// build nodes for all steps
 	steps, _ := plan.graph.Steps()
 	for _, nodeNames := range steps {
 		for _, nodeName := range nodeNames {
@@ -139,6 +154,9 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 	return
 }
 
+// buildNode build node by ref, props and prebuilt nodes.
+// prefix will be added to node name,
+// example: prefix = ClusterA, node name = SubNodeB => ClusterA.SubNodeB
 func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebuilt map[string]Node) (Node, error) {
 	var rootNode Node
 	var nodeName string
@@ -150,6 +168,7 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 		nodeName = root.NodeName
 	}
 
+	// prefer to use pre-built nodes
 	if node := getPrebuiltNode(prebuilt, nodeName); node != nil {
 		rootNode = node
 	} else if builder := engine.builders[root.NodeType]; builder != nil {
@@ -161,9 +180,11 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 		return nil, fmt.Errorf("no builder found for type %s", root.NodeType)
 	}
 
+	// inject sub-nodes for cluster
 	if cluster, ok := rootNode.(Cluster); ok {
 		var subNodes []Node
 
+		// build sub-nodes just like root node(cluster)
 		for _, ref := range root.SubRefs {
 			var subNode Node
 
@@ -205,6 +226,7 @@ func getPrebuiltNode(prebuilt map[string]Node, nodeName string) Node {
 	var node Node
 
 	if prebuilt[nodeName] != nil {
+		// prefer get clone of prebuilt node
 		if cloneableNode, ok := prebuilt[nodeName].(Cloneable); ok {
 			node = cloneableNode.Clone()
 		} else {
