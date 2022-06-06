@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -145,5 +146,31 @@ func TestOverlayState(t *testing.T) {
 
 	if helper2.GetInt("c") != 1 {
 		t.Errorf("expect c = 1, but got %d", helper1.GetInt("c"))
+	}
+}
+
+func TestPanic(t *testing.T) {
+	running.RegisterNodeBuilder("Base", func(name string, props running.Props) (running.Node, error) {
+		return &running.Base{}, nil
+	})
+
+	ops := []running.Option{
+		running.AddNodes("Base", "B1"),
+		running.SLinkNodes("B1", "END"),
+	}
+
+	plan := running.NewPlan(nil, nil, ops...)
+
+	err := running.Global.RegisterPlan("TestPanic", plan)
+	if err != nil {
+		t.Errorf("register plan failed, err=%s", err.Error())
+		return
+	}
+
+	output := <-running.Global.ExecPlan("TestPanic", context.Background())
+	if output.Err != nil {
+		fmt.Printf("exec plan failed, err=%s\n", output.Err.Error())
+	} else {
+		t.Errorf("exec plan successfully")
 	}
 }

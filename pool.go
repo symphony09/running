@@ -2,6 +2,7 @@ package running
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -36,14 +37,20 @@ func (worker Worker) Work(ctx context.Context) <-chan Output {
 	// get node ready to run from a chan of works, block until all node done
 	for nodeName := range worker.works.TODO() {
 		go func(nodeName string) {
+			defer func() {
+				if err := recover(); err != nil {
+					output.Err = fmt.Errorf("work panic: %v", err)
+				}
+
+				worker.works.Done(nodeName)
+			}()
+
 			if statefulNode, ok := worker.nodes[nodeName].(Stateful); ok {
 				statefulNode.Bind(state)
 			}
 
 			worker.nodes[nodeName].Run(ctx)
 			worker.nodes[nodeName].Reset()
-
-			worker.works.Done(nodeName)
 		}(nodeName)
 	}
 
