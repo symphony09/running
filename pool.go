@@ -40,9 +40,10 @@ func (worker Worker) Work(ctx context.Context) <-chan Output {
 			defer func() {
 				if err := recover(); err != nil {
 					output.Err = fmt.Errorf("work panic: %v", err)
+					worker.works.Clean()
+				} else {
+					worker.works.Done(nodeName)
 				}
-
-				worker.works.Done(nodeName)
 			}()
 
 			if statefulNode, ok := worker.nodes[nodeName].(Stateful); ok {
@@ -138,6 +139,21 @@ func (list *WorkList) Done(name string) {
 	list.done <- name
 }
 
+// Clean reset all state,
+// notify goroutine to exits,
+// close chan, end the block.
+func (list *WorkList) Clean() {
+	for _, item := range list.Items {
+		item.State = WorkStateTodo
+		for _, nextItem := range item.Next {
+			nextItem.Prev++
+		}
+	}
+
+	list.completed <- struct{}{}
+	close(list.todo)
+}
+
 func (list *WorkList) feed() {
 	var hasMoreTodo, hasDoing bool
 
@@ -159,19 +175,8 @@ func (list *WorkList) feed() {
 		}
 
 		// if no nodes are running as well, work is over
-		// reset all state,
-		// notify goroutine to exits,
-		// close chan, end the block.
 		if !hasDoing {
-			for _, item := range list.Items {
-				item.State = WorkStateTodo
-				for _, nextItem := range item.Next {
-					nextItem.Prev++
-				}
-			}
-
-			list.completed <- struct{}{}
-			close(list.todo)
+			list.Clean()
 		}
 	}
 }

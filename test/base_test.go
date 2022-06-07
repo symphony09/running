@@ -156,7 +156,8 @@ func TestPanic(t *testing.T) {
 
 	ops := []running.Option{
 		running.AddNodes("Base", "B1"),
-		running.SLinkNodes("B1", "END"),
+		running.AddNodes("BaseTest", "T1"),
+		running.SLinkNodes("B1", "T1"),
 	}
 
 	plan := running.NewPlan(nil, nil, ops...)
@@ -170,7 +171,32 @@ func TestPanic(t *testing.T) {
 	output := <-running.Global.ExecPlan("TestPanic", context.Background())
 	if output.Err != nil {
 		fmt.Printf("exec plan failed, err=%s\n", output.Err.Error())
+
+		sum := utils.GetRunSummary(output.State)
+		if len(sum.Logs["T1"]) != 0 {
+			t.Errorf("expect T1 run count = 0, but got %d", len(sum.Logs["T1"]))
+		}
 	} else {
 		t.Errorf("exec plan successfully")
+	}
+}
+
+func BenchmarkExecPlan(b *testing.B) {
+	ops := []running.Option{
+		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),
+		running.LinkNodes("N1", "N4"),
+		running.SLinkNodes("N1", "N2", "N3"),
+	}
+
+	plan := running.NewPlan(nil, nil, ops...)
+
+	err := running.RegisterPlan("BenchmarkExecPlan", plan)
+	if err != nil {
+		b.Errorf("register plan failed, err=%s", err.Error())
+		return
+	}
+
+	for i := 0; i < b.N; i++ {
+		running.ExecPlan("BenchmarkExecPlan", nil)
 	}
 }
