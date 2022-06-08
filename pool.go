@@ -40,7 +40,7 @@ func (worker Worker) Work(ctx context.Context) <-chan Output {
 			defer func() {
 				if err := recover(); err != nil {
 					output.Err = fmt.Errorf("work panic: %v", err)
-					worker.works.Clean()
+					worker.works.Terminate(nodeName)
 				} else {
 					worker.works.Done(nodeName)
 				}
@@ -64,6 +64,8 @@ type WorkList struct {
 	todo, done chan string
 
 	completed chan struct{}
+
+	terminate chan string
 
 	Items map[string]*workItem
 }
@@ -105,6 +107,7 @@ func (list *WorkList) TODO() <-chan string {
 	list.todo = make(chan string, len(list.Items))
 	list.done = make(chan string, len(list.Items))
 	list.completed = make(chan struct{}, 1)
+	list.terminate = make(chan string, len(list.Items))
 
 	// find node ready to run
 	list.feed()
@@ -126,6 +129,23 @@ func (list *WorkList) TODO() <-chan string {
 
 				// find node ready to run
 				list.feed()
+			case name := <-list.terminate:
+				if list.Items[name] == nil {
+					break
+				}
+
+				// mark node done
+				list.Items[name].State = WorkStateDone
+
+				// no more nodes need to do
+				for _, item := range list.Items {
+					if item.State == WorkStateTodo {
+						item.State = WorkStateDone
+					}
+				}
+
+				// can't return here, wait all node done
+				list.feed()
 			case <-list.completed: // all node done, exit
 				return
 			}
@@ -135,14 +155,19 @@ func (list *WorkList) TODO() <-chan string {
 	return list.todo
 }
 
+func (list *WorkList) Terminate(name string) {
+	list.terminate <- name
+}
+
 func (list *WorkList) Done(name string) {
 	list.done <- name
 }
 
-// Clean reset all state,
 // notify goroutine to exits,
 // close chan, end the block.
-func (list *WorkList) Clean() {
+func (list *WorkList) clean() {
+	list.completed <- struct{}{}
+
 	for _, item := range list.Items {
 		item.State = WorkStateTodo
 		for _, nextItem := range item.Next {
@@ -150,7 +175,6 @@ func (list *WorkList) Clean() {
 		}
 	}
 
-	list.completed <- struct{}{}
 	close(list.todo)
 }
 
@@ -176,7 +200,7 @@ func (list *WorkList) feed() {
 
 		// if no nodes are running as well, work is over
 		if !hasDoing {
-			list.Clean()
+			list.clean()
 		}
 	}
 }
