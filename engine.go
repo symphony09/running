@@ -2,8 +2,11 @@ package running
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
+	"time"
 )
 
 var Global = &Engine{
@@ -36,6 +39,10 @@ func UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
 	return Global.UpdatePlan(name, fastMode, update)
 }
 
+func LoadPlanFromJson(name string, jsonData []byte, prebuilt []Node) error {
+	return Global.LoadPlanFromJson(name, jsonData, prebuilt)
+}
+
 type Engine struct {
 	builders map[string]BuildNodeFunc
 
@@ -55,6 +62,24 @@ func (engine *Engine) RegisterPlan(name string, plan *Plan) error {
 	if err != nil {
 		return err
 	}
+	engine.plans[name] = plan
+	return nil
+}
+
+func (engine *Engine) LoadPlanFromJson(name string, jsonData []byte, prebuilt []Node) error {
+	plan := &Plan{}
+	err := json.Unmarshal(jsonData, plan)
+	if err != nil {
+		return err
+	}
+
+	plan.prebuilt = make(map[string]Node)
+	for _, node := range prebuilt {
+		plan.prebuilt[node.Name()] = node
+	}
+	plan.prebuilt = make(map[string]Node)
+	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
+
 	engine.plans[name] = plan
 	return nil
 }
