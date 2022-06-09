@@ -1,6 +1,10 @@
 package utils
 
-import "github.com/symphony09/running"
+import (
+	"strconv"
+
+	"github.com/symphony09/running"
+)
 
 type PropsHelper struct {
 	Props running.Props
@@ -16,8 +20,7 @@ func (helper PropsHelper) GetString(key string) (value string) {
 	}
 
 	raw, _ := helper.Props.Get(key)
-	value, _ = raw.(string)
-	return
+	return tranString(raw)
 }
 
 func (helper PropsHelper) GetInt(key string) (value int) {
@@ -26,8 +29,7 @@ func (helper PropsHelper) GetInt(key string) (value int) {
 	}
 
 	raw, _ := helper.Props.Get(key)
-	value, _ = raw.(int)
-	return
+	return tranInt(raw)
 }
 
 func (helper PropsHelper) GetFloat(key string) (value float64) {
@@ -36,8 +38,7 @@ func (helper PropsHelper) GetFloat(key string) (value float64) {
 	}
 
 	raw, _ := helper.Props.Get(key)
-	value, _ = raw.(float64)
-	return
+	return tranFloat(raw)
 }
 
 func (helper PropsHelper) GetBool(key string) (value bool) {
@@ -46,8 +47,7 @@ func (helper PropsHelper) GetBool(key string) (value bool) {
 	}
 
 	raw, _ := helper.Props.Get(key)
-	value, _ = raw.(bool)
-	return
+	return tranBool(raw)
 }
 
 func (helper PropsHelper) GetBytes(key string) (value []byte) {
@@ -66,8 +66,7 @@ func (helper PropsHelper) SubGetString(sub, key string) (value string) {
 	}
 
 	raw, _ := helper.Props.SubGet(sub, key)
-	value, _ = raw.(string)
-	return
+	return tranString(raw)
 }
 
 func (helper PropsHelper) SubGetInt(sub, key string) (value int) {
@@ -76,8 +75,7 @@ func (helper PropsHelper) SubGetInt(sub, key string) (value int) {
 	}
 
 	raw, _ := helper.Props.SubGet(sub, key)
-	value, _ = raw.(int)
-	return
+	return tranInt(raw)
 }
 
 func (helper PropsHelper) SubGetFloat(sub, key string) (value float64) {
@@ -86,8 +84,7 @@ func (helper PropsHelper) SubGetFloat(sub, key string) (value float64) {
 	}
 
 	raw, _ := helper.Props.SubGet(sub, key)
-	value, _ = raw.(float64)
-	return
+	return tranFloat(raw)
 }
 
 func (helper PropsHelper) SubGetBool(sub, key string) (value bool) {
@@ -96,8 +93,7 @@ func (helper PropsHelper) SubGetBool(sub, key string) (value bool) {
 	}
 
 	raw, _ := helper.Props.SubGet(sub, key)
-	value, _ = raw.(bool)
-	return
+	return tranBool(raw)
 }
 
 func (helper PropsHelper) SubGetBytes(sub, key string) (value []byte) {
@@ -108,4 +104,66 @@ func (helper PropsHelper) SubGetBytes(sub, key string) (value []byte) {
 	raw, _ := helper.Props.SubGet(sub, key)
 	value, _ = raw.([]byte)
 	return
+}
+
+func tranString(raw interface{}) string {
+	switch v := raw.(type) {
+	case int:
+		return strconv.Itoa(v)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case string:
+		return v
+	default:
+		return ""
+	}
+}
+
+func tranInt(raw interface{}) int {
+	switch v := raw.(type) {
+	case int:
+		return v
+	case float64:
+		return int(v)
+	case string:
+		if i, err := strconv.Atoi(v); err != nil {
+			return 0
+		} else {
+			return i
+		}
+	default:
+		return 0
+	}
+}
+
+func tranFloat(raw interface{}) float64 {
+	switch v := raw.(type) {
+	case int:
+		return float64(v)
+	case float64:
+		return v
+	case string:
+		if f, err := strconv.ParseFloat(v, 64); err != nil {
+			return 0
+		} else {
+			return f
+		}
+	default:
+		return 0
+	}
+}
+
+func tranBool(raw interface{}) bool {
+	switch v := raw.(type) {
+	case bool:
+		return v
+	case string:
+		if b, err := strconv.ParseBool(v); err != nil {
+			return false
+		} else {
+			return b
+		}
+	default:
+		return false
+	}
 }
