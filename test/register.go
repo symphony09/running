@@ -22,4 +22,9 @@ func init() {
 
 		return node, nil
 	})
+
+	running.RegisterNodeBuilder("TimerWrapper", func(name string, props running.Props) (running.Node, error) {
+		node := new(TimerWrapper)
+		return node, nil
+	})
 }

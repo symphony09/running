@@ -23,6 +23,13 @@ type Cluster interface {
 	Inject(nodes []Node)
 }
 
+// Wrapper a class of nodes that can wrap other node
+type Wrapper interface {
+	Node
+
+	Wrap(target Node)
+}
+
 // Stateful a class of nodes that need record or query state
 type Stateful interface {
 	Node
@@ -117,6 +124,32 @@ func (base *Base) Reset() {
 func (base *Base) ResetSubNodes() {
 	for _, node := range base.SubNodes {
 		node.Reset()
+	}
+}
+
+type BaseWrapper struct {
+	Target Node
+}
+
+func (wrapper *BaseWrapper) Wrap(target Node) {
+	wrapper.Target = target
+}
+
+func (wrapper *BaseWrapper) Name() string {
+	return wrapper.Target.Name()
+}
+
+func (wrapper *BaseWrapper) Run(ctx context.Context) {
+	wrapper.Target.Run(ctx)
+}
+
+func (wrapper *BaseWrapper) Reset() {
+	wrapper.Target.Reset()
+}
+
+func (wrapper *BaseWrapper) Bind(state State) {
+	if statefulTarget, ok := wrapper.Target.(Stateful); ok {
+		statefulTarget.Bind(state)
 	}
 }
 

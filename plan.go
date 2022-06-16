@@ -103,6 +103,16 @@ var MergeNodes = func(cluster string, subNodes ...string) Option {
 	}
 }
 
+var WrapNodes = func(wrapper string, targets ...string) Option {
+	return func(dag *DAG) {
+		for _, target := range targets {
+			if targetNodeRef := dag.NodeRefs[target]; targetNodeRef != nil {
+				targetNodeRef.Wrappers = append(targetNodeRef.Wrappers, wrapper)
+			}
+		}
+	}
+}
+
 // LinkNodes link first node with others.
 // example: LinkNodes("A", "B", "C") => A -> B, A -> C.
 var LinkNodes = func(nodes ...string) Option {
@@ -169,6 +179,8 @@ type NodeRef struct {
 	NodeType string
 
 	SubRefs []*NodeRef
+
+	Wrappers []string
 }
 
 // Print format: NodeA:[SubNodeB, SubNodeC ...]

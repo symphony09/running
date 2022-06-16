@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/symphony09/running"
@@ -41,3 +42,15 @@ type NothingNode struct {
 }
 
 func (node *NothingNode) Run(ctx context.Context) {}
+
+type TimerWrapper struct {
+	running.BaseWrapper
+}
+
+func (wrapper *TimerWrapper) Run(ctx context.Context) {
+	start := time.Now()
+
+	wrapper.Target.Run(ctx)
+
+	fmt.Printf("Node %s cost %d ms\n", wrapper.Target.Name(), time.Since(start).Milliseconds())
+}

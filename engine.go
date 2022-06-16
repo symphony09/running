@@ -225,6 +225,11 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 					return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
 				}
 
+				subNode, err = engine.wrapNode(subNode, ref.Wrappers, props)
+				if err != nil {
+					return nil, err
+				}
+
 				subNodes = append(subNodes, subNode)
 			} else {
 				if prefix == "" {
@@ -244,7 +249,30 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 		cluster.Inject(subNodes)
 	}
 
+	rootNode, err = engine.wrapNode(rootNode, root.Wrappers, props)
+	if err != nil {
+		return nil, err
+	}
+
 	return rootNode, nil
+}
+
+func (engine Engine) wrapNode(target Node, wrappers []string, props Props) (Node, error) {
+	for _, wrapper := range wrappers {
+		if builder := engine.builders[wrapper]; builder != nil {
+			node, err := builder(target.Name(), props)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build %s, err=%s", wrapper, err.Error())
+			}
+
+			if wrapperNode, ok := node.(Wrapper); ok {
+				wrapperNode.Wrap(target)
+				target = wrapperNode
+			}
+		}
+	}
+
+	return target, nil
 }
 
 func getPrebuiltNode(prebuilt map[string]Node, nodeName string) Node {
