@@ -23,6 +23,8 @@ type JsonNode struct {
 	Type string
 
 	SubNodes []*JsonNode
+
+	Wrappers []string
 }
 
 func (plan *Plan) MarshalJSON() ([]byte, error) {
@@ -61,6 +63,7 @@ func newJsonNode(ref *NodeRef) *JsonNode {
 	node := new(JsonNode)
 	node.Name = ref.NodeName
 	node.Type = ref.NodeType
+	node.Wrappers = ref.Wrappers
 
 	for _, subRef := range ref.SubRefs {
 		node.SubNodes = append(node.SubNodes, newJsonNode(subRef))
@@ -121,6 +124,7 @@ func parseRefFromJsonNode(node *JsonNode, graph *DAG) *NodeRef {
 	ref := &NodeRef{
 		NodeName: node.Name,
 		NodeType: node.Type,
+		Wrappers: node.Wrappers,
 	}
 
 	for _, subNode := range node.SubNodes {
