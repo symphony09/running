@@ -16,6 +16,8 @@ type Plan struct {
 
 	Options []Option
 
+	Strict bool
+
 	version string
 
 	graph *DAG
@@ -55,6 +57,10 @@ func (plan *Plan) Init() error {
 		return fmt.Errorf("invalid plan, %w", err)
 	}
 
+	if plan.Strict && len(graph.Warning) > 0 {
+		return fmt.Errorf("invaild plan, %s", strings.Join(graph.Warning, ";"))
+	}
+
 	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
 	plan.graph = graph
 	plan.props = plan.Props
@@ -92,11 +98,14 @@ var AddNodes = func(typ string, names ...string) Option {
 var MergeNodes = func(cluster string, subNodes ...string) Option {
 	return func(dag *DAG) {
 		if clusterRef, ok := dag.NodeRefs[cluster]; !ok {
+			dag.Warning = append(dag.Warning, fmt.Sprintf("cluster %s ref not found", cluster))
 			return
 		} else {
 			for _, node := range subNodes {
 				if _, ok := dag.NodeRefs[node]; ok {
 					clusterRef.SubRefs = append(clusterRef.SubRefs, dag.NodeRefs[node])
+				} else {
+					dag.Warning = append(dag.Warning, fmt.Sprintf("sub node %s ref not found", node))
 				}
 			}
 		}
@@ -108,6 +117,8 @@ var WrapNodes = func(wrapper string, targets ...string) Option {
 		for _, target := range targets {
 			if targetNodeRef := dag.NodeRefs[target]; targetNodeRef != nil {
 				targetNodeRef.Wrappers = append(targetNodeRef.Wrappers, wrapper)
+			} else {
+				dag.Warning = append(dag.Warning, fmt.Sprintf("wrap target node %s ref not found", target))
 			}
 		}
 	}
@@ -127,6 +138,8 @@ var LinkNodes = func(nodes ...string) Option {
 					dag.Vertexes[root] = &Vertex{
 						RefRoot: dag.NodeRefs[root],
 					}
+				} else {
+					dag.Warning = append(dag.Warning, fmt.Sprintf("link target node %s ref not found", root))
 				}
 			}
 		}
@@ -156,6 +169,8 @@ var SLinkNodes = func(nodes ...string) Option {
 					dag.Vertexes[root] = &Vertex{
 						RefRoot: dag.NodeRefs[root],
 					}
+				} else {
+					dag.Warning = append(dag.Warning, fmt.Sprintf("Slink target node %s ref not found", root))
 				}
 			}
 		}
@@ -239,6 +254,8 @@ type DAG struct {
 	NodeRefs map[string]*NodeRef
 
 	Vertexes map[string]*Vertex
+
+	Warning []string
 
 	sync.Mutex
 }
