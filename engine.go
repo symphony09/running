@@ -160,14 +160,11 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 
 	nodeMap := map[string]Node{}
 
-	// build nodes for all steps
-	steps, _ := plan.graph.Steps()
-	for _, nodeNames := range steps {
-		for _, nodeName := range nodeNames {
-			nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.props, "", plan.prebuilt)
-			if err != nil {
-				return
-			}
+	for _, v := range plan.graph.Vertexes {
+		nodeName := v.RefRoot.NodeName
+		nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.props, "", plan.prebuilt)
+		if err != nil {
+			return
 		}
 	}
 
