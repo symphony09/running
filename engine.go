@@ -39,6 +39,10 @@ func UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
 	return Global.UpdatePlan(name, fastMode, update)
 }
 
+// LoadPlanFromJson load plan from json data
+// name: name of plan to load
+// jsonData: json data of plan
+// prebuilt: prebuilt nodes, can be nil
 func LoadPlanFromJson(name string, jsonData []byte, prebuilt []Node) error {
 	return Global.LoadPlanFromJson(name, jsonData, prebuilt)
 }
@@ -66,6 +70,10 @@ func (engine *Engine) RegisterPlan(name string, plan *Plan) error {
 	return nil
 }
 
+// LoadPlanFromJson load plan from json data
+// name: name of plan to load
+// jsonData: json data of plan
+// prebuilt: prebuilt nodes, can be nil
 func (engine *Engine) LoadPlanFromJson(name string, jsonData []byte, prebuilt []Node) error {
 	plan := &Plan{}
 	err := json.Unmarshal(jsonData, plan)

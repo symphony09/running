@@ -99,6 +99,14 @@ Greet1 由 Greet 对应的构建函数构建，执行时输出 Hello!
 
 Introduce1 由 Introduce 对应的构建函数构建，执行时输出 This is 加上上下文参数中的 name 值。
 
+默认情况下，没有通过 AddNode 添加 Node，直接在其他操作如 SLinkNodes 中引用 Node 不会报错
+
+例如：将实例代码中 running.SLinkNodes("Greet1", "Introduce1"))) 改为 running.SLinkNodes("Greet1", "Introduce1", "END")))
+
+END 并没有通过 AddNode 添加，引擎还是会按 Greet1 -> Introduce1 执行，直接忽略 END
+
+如果将 Plan 的 Strict 属性设为 true，则可以严格按照 Plan 执行，如果没有找到 END，注册 Plan 就会报错。
+
 3. 执行 Plan1
 
 在 plan 注册完成后就可以在任意时机，执行任意次数 plan。
@@ -196,9 +204,10 @@ This is RUNNING .
 
 ### 更复杂的 Plan
 
-上文提到了 AddNodes 和 SLinkNodes，除了这两种引擎还支持 MergeNodes 和 LinkNodes。
+上文提到了 AddNodes 和 SLinkNodes，除了这两种引擎还支持 MergeNodes，WrapNodes 和 LinkNodes。
 
 - MergeNodes ：将一些 Node 合并为 一个 Node 的 子 Node，子 Node 如何执行由父 Node 决定。
+- WrapNodes：包装一些 Node 进行功能增强，如耗时统计，记录日志等，可以参考 test/wrap_test.go。
 - LinkNodes：与 SLinkNodes 类似，但连接方式略有不同，LinkNodes 是将其他 Node 同时作为一个 Node的后继。
 
 #### 示例代码
@@ -480,3 +489,11 @@ type Cloneable interface {
 ```
 
 这样引擎就会调用预建 Node 的 Clone 方法获取克隆Node，而不是直接浅拷贝预建 Node。
+
+### Plan 导出和载入
+
+Plan 支持 json 序列化和反序列化，所以可以方便的导出和保存。
+
+在序列化之前，Plan 首先应该调用 Init 方法进行初始化。
+
+要载入 Plan，调用引擎的 LoadPlanFromJson 的方法即可。

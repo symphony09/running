@@ -112,6 +112,9 @@ var MergeNodes = func(cluster string, subNodes ...string) Option {
 	}
 }
 
+// WrapNodes wrap node to enhance it,
+// wrapper：node type which implement Wrapper,
+// targets：wrap targets
 var WrapNodes = func(wrapper string, targets ...string) Option {
 	return func(dag *DAG) {
 		for _, target := range targets {
