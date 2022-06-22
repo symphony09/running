@@ -118,6 +118,7 @@ func (base *Base) Run(ctx context.Context) {
 }
 
 func (base *Base) Reset() {
+	base.State = nil
 	base.ResetSubNodes()
 }
 
