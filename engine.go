@@ -9,12 +9,16 @@ import (
 	"time"
 )
 
-var Global = &Engine{
-	builders: map[string]BuildNodeFunc{},
+var Global = NewDefaultEngine()
 
-	plans: map[string]*Plan{},
+func NewDefaultEngine() *Engine {
+	return &Engine{
+		builders: map[string]BuildNodeFunc{},
 
-	pools: map[string]*WorkerPool{},
+		plans: map[string]*Plan{},
+
+		pools: map[string]*WorkerPool{},
+	}
 }
 
 // RegisterNodeBuilder register node builder to Global
