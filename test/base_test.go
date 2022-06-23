@@ -65,7 +65,7 @@ func TestBase(t *testing.T) {
 		t.Errorf("expect B6 run count = 0, but got %d", len(sum.Logs["B6"]))
 	}
 
-	err = running.Global.UpdatePlan("Base", true, func(plan *running.Plan) {
+	err = running.Global.UpdatePlan("Base", func(plan *running.Plan) {
 		plan.Props = running.StandardProps(map[string]interface{}{
 			"S1.key":   "test_key",
 			"S1.value": "test_value2",
@@ -85,7 +85,7 @@ func TestBase(t *testing.T) {
 		t.Errorf("expect state value = test_value, but got %s", value)
 	}
 
-	err = running.Global.UpdatePlan("Base", true, func(plan *running.Plan) {
+	err = running.UpdatePlan("Base", func(plan *running.Plan) {
 		plan.Props = running.StandardProps(map[string]interface{}{
 			"S1.key":   "test_key",
 			"S1.value": "test_value2",
@@ -94,6 +94,8 @@ func TestBase(t *testing.T) {
 		plan.Options[len(plan.Options)-1] = running.SLinkNodes("S1", "B6")
 		return
 	})
+
+	running.ClearPool("Base")
 
 	if err != nil {
 		t.Errorf("update plan failed, expect success, err=%s", err.Error())

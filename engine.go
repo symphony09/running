@@ -37,10 +37,14 @@ func ExecPlan(name string, ctx context.Context) <-chan Output {
 }
 
 // UpdatePlan update plan register in Global.
-// if fastMode is true, the new plan will take effect immediately,
-// otherwise, the new workers will gradually replace the old workers.
-func UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
-	return Global.UpdatePlan(name, fastMode, update)
+func UpdatePlan(name string, update func(plan *Plan)) error {
+	return Global.UpdatePlan(name, update)
+}
+
+// ClearPool clear worker pool of plan, invoke it to make plan effect immediately after update
+// name: name of plan
+func ClearPool(name string) {
+	Global.ClearPool(name)
 }
 
 // LoadPlanFromJson load plan from json data
@@ -144,7 +148,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 }
 
 // UpdatePlan update plan register in engine
-func (engine *Engine) UpdatePlan(name string, fastMode bool, update func(plan *Plan)) error {
+func (engine *Engine) UpdatePlan(name string, update func(plan *Plan)) error {
 	plan := engine.plans[name]
 
 	plan.locker.Lock()
@@ -156,12 +160,13 @@ func (engine *Engine) UpdatePlan(name string, fastMode bool, update func(plan *P
 		return err
 	}
 
-	// in fast mode, drop the old worker pool
-	if fastMode {
-		engine.pools[name] = nil
-	}
-
 	return nil
+}
+
+// ClearPool clear worker pool of plan, invoke it to make plan effect immediately after update
+// name: name of plan
+func (engine *Engine) ClearPool(name string) {
+	engine.pools[name] = nil
 }
 
 func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
