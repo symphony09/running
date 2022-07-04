@@ -26,13 +26,15 @@ type Worker struct {
 
 	nodes map[string]Node
 
+	stateBuilder func() State
+
 	version string
 }
 
 func (worker Worker) Work(ctx context.Context) <-chan Output {
 	output := Output{}
 	outputCh := make(chan Output, 1)
-	state := NewStandardState()
+	state := worker.stateBuilder()
 
 	// get node ready to run from a chan of works, block until all node done
 	for nodeName := range worker.works.TODO() {

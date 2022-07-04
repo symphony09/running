@@ -13,6 +13,10 @@ var Global = NewDefaultEngine()
 
 func NewDefaultEngine() *Engine {
 	return &Engine{
+		StateBuilder: func() State {
+			return NewStandardState()
+		},
+
 		builders: map[string]BuildNodeFunc{},
 
 		plans: map[string]*Plan{},
@@ -56,6 +60,8 @@ func LoadPlanFromJson(name string, jsonData []byte, prebuilt []Node) error {
 }
 
 type Engine struct {
+	StateBuilder func() State
+
 	builders map[string]BuildNodeFunc
 
 	plans map[string]*Plan
@@ -186,9 +192,10 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 	}
 
 	worker = &Worker{
-		works:   NewWorkList(plan.graph),
-		nodes:   nodeMap,
-		version: plan.version,
+		works:        NewWorkList(plan.graph),
+		nodes:        nodeMap,
+		stateBuilder: engine.StateBuilder,
+		version:      plan.version,
 	}
 	return
 }
