@@ -15,8 +15,8 @@ func TestBase(t *testing.T) {
 		running.AddNodes("BaseTest", "B1", "B2", "B3", "B4", "B5", "B6"),
 		running.AddNodes("SetState", "S1"),
 		running.LinkNodes("B1", "B2", "B3"),
-		running.SLinkNodes("B3", "B4", "B5", "S1"),
-		running.SLinkNodes("B2", "S1"),
+		running.SLinkNodes("B3", "B4", "B5"),
+		running.RLinkNodes("S1", "B2", "B5"),
 	}
 
 	props := running.StandardProps(map[string]interface{}{

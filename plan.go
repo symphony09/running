@@ -191,6 +191,37 @@ var SLinkNodes = func(nodes ...string) Option {
 	}
 }
 
+// RLinkNodes link first node with others.
+// example: RLinkNodes("A", "B", "C") => B -> A, C -> A.
+var RLinkNodes = func(nodes ...string) Option {
+	return func(dag *DAG) {
+		if len(nodes) < 1 {
+			return
+		}
+
+		for _, root := range nodes {
+			if _, ok := dag.Vertexes[root]; !ok {
+				if _, ok := dag.NodeRefs[root]; ok {
+					dag.Vertexes[root] = &Vertex{
+						RefRoot: dag.NodeRefs[root],
+					}
+				} else {
+					dag.Warning = append(dag.Warning, fmt.Sprintf("link target node %s ref not found", root))
+				}
+			}
+		}
+
+		if dag.Vertexes[nodes[0]] != nil {
+			for _, node := range nodes[1:] {
+				if dag.Vertexes[node] != nil {
+					dag.Vertexes[node].Next = append(dag.Vertexes[node].Next, dag.Vertexes[nodes[0]])
+					dag.Vertexes[nodes[0]].Prev++
+				}
+			}
+		}
+	}
+}
+
 type NodeRef struct {
 	NodeName string
 
