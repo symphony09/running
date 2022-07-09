@@ -217,6 +217,7 @@ func BenchmarkExecPlan(b *testing.B) {
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),
 		running.LinkNodes("N1", "N4"),
 		running.SLinkNodes("N1", "N2", "N3"),
+		running.ReUseNodes("N1", "N2", "N3", "N4"),
 	}
 
 	plan := running.NewPlan(nil, nil, ops...)
