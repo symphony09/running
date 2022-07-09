@@ -182,13 +182,24 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 	defer plan.locker.RUnlock()
 
 	nodeMap := map[string]Node{}
+	reuse := map[string]Node{} // collect nodes which can be reused in the build nodes process
 
 	for _, v := range plan.graph.Vertexes {
 		nodeName := v.RefRoot.NodeName
-		nodeMap[nodeName], err = engine.buildNode(plan.graph.NodeRefs[nodeName], plan.props, "", plan.prebuilt)
+		nodeMap[nodeName], err = engine.buildNode(plan, nodeName, "", reuse)
 		if err != nil {
 			return
 		}
+	}
+
+	if len(reuse) > 0 {
+		plan.locker.RUnlock()
+		plan.locker.Lock()
+		for nodeName, node := range reuse {
+			plan.prebuilt[nodeName] = node
+		}
+		plan.locker.Unlock()
+		plan.locker.RLock()
 	}
 
 	worker = &Worker{
@@ -203,9 +214,12 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 // buildNode build node by ref, props and prebuilt nodes.
 // prefix will be added to node name,
 // example: prefix = ClusterA, node name = SubNodeB => ClusterA.SubNodeB
-func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebuilt map[string]Node) (Node, error) {
+func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reuse map[string]Node) (Node, error) {
+	root := plan.graph.NodeRefs[nodeName]
+	props := plan.props
+	prebuilt := plan.prebuilt
+
 	var rootNode Node
-	var nodeName string
 	var err error
 
 	if prefix != "" {
@@ -224,6 +238,10 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 		}
 	} else {
 		return nil, fmt.Errorf("no builder found for type %s", root.NodeType)
+	}
+
+	if root.ReUse && prebuilt[nodeName] == nil {
+		reuse[nodeName] = rootNode
 	}
 
 	// inject sub-nodes for cluster
@@ -246,6 +264,10 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 					return nil, fmt.Errorf("no builder found for type %s", ref.NodeType)
 				}
 
+				if ref.ReUse && prebuilt[rootNode.Name()+"."+ref.NodeName] == nil {
+					reuse[rootNode.Name()+"."+ref.NodeName] = subNode
+				}
+
 				subNode, err = engine.wrapNode(subNode, ref.Wrappers, props)
 				if err != nil {
 					return nil, err
@@ -259,7 +281,7 @@ func (engine *Engine) buildNode(root *NodeRef, props Props, prefix string, prebu
 					prefix = prefix + "." + root.NodeName
 				}
 
-				if subNode, err = engine.buildNode(ref, props, prefix, prebuilt); err != nil {
+				if subNode, err = engine.buildNode(plan, ref.NodeName, prefix, reuse); err != nil {
 					return nil, err
 				} else {
 					subNodes = append(subNodes, subNode)

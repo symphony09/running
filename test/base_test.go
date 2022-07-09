@@ -183,6 +183,35 @@ func TestPanic(t *testing.T) {
 	}
 }
 
+func TestReUseNodes(t *testing.T) {
+	count := 0
+	running.RegisterNodeBuilder("BuildCounter", func(name string, props running.Props) (running.Node, error) {
+		count++
+		node := new(NothingNode)
+		node.SetName(name)
+		return node, nil
+	})
+
+	plan := running.NewPlan(nil, nil,
+		running.AddNodes("BuildCounter", "B1"),
+		running.ReUseNodes("B1"),
+		running.LinkNodes("B1"))
+
+	err := running.RegisterPlan("TestReUseNodes", plan)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	<-running.ExecPlan("TestReUseNodes", nil)
+	running.ClearPool("TestReUseNodes")
+	<-running.ExecPlan("TestReUseNodes", nil)
+
+	if count != 1 {
+		t.Errorf("expect build count = 1, but got %d", count)
+	}
+}
+
 func BenchmarkExecPlan(b *testing.B) {
 	ops := []running.Option{
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),

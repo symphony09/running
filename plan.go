@@ -127,6 +127,18 @@ var WrapNodes = func(wrapper string, targets ...string) Option {
 	}
 }
 
+// ReUseNodes reuse node to avoid unnecessary rebuilds,
+// fits nodes whose properties do not change and implements the clone method
+var ReUseNodes = func(nodes ...string) Option {
+	return func(dag *DAG) {
+		for _, node := range nodes {
+			if dag.NodeRefs[node] != nil {
+				dag.NodeRefs[node].ReUse = true
+			}
+		}
+	}
+}
+
 // LinkNodes link first node with others.
 // example: LinkNodes("A", "B", "C") => A -> B, A -> C.
 var LinkNodes = func(nodes ...string) Option {
@@ -230,6 +242,8 @@ type NodeRef struct {
 	SubRefs []*NodeRef
 
 	Wrappers []string
+
+	ReUse bool
 }
 
 // Print format: NodeA:[SubNodeB, SubNodeC ...]
