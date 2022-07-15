@@ -99,7 +99,6 @@ func (engine *Engine) LoadPlanFromJson(name string, jsonData []byte, prebuilt []
 	for _, node := range prebuilt {
 		plan.prebuilt[node.Name()] = node
 	}
-	plan.prebuilt = make(map[string]Node)
 	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
 
 	engine.plans[name] = plan
@@ -110,6 +109,10 @@ func (engine *Engine) LoadPlanFromJson(name string, jsonData []byte, prebuilt []
 func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 	output := Output{}
 	outputCh := make(chan Output, 1)
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	go func() {
 		if engine.plans[name] == nil {
@@ -218,6 +221,10 @@ func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reus
 	root := plan.graph.NodeRefs[nodeName]
 	props := plan.props
 	prebuilt := plan.prebuilt
+
+	if props == nil {
+		props = EmptyProps{}
+	}
 
 	var rootNode Node
 	var err error
