@@ -8,10 +8,10 @@ import (
 type JsonPlan struct {
 	Props map[string]interface{}
 
-	Parts []Part
+	Graph []GraphNode
 }
 
-type Part struct {
+type GraphNode struct {
 	Node *JsonNode
 
 	NextNodes []string
@@ -52,7 +52,7 @@ func (plan *Plan) MarshalJSON() ([]byte, error) {
 			next = append(next, v.RefRoot.NodeName)
 		}
 
-		jsonPlan.Parts = append(jsonPlan.Parts, Part{
+		jsonPlan.Graph = append(jsonPlan.Graph, GraphNode{
 			Node:      node,
 			NextNodes: next,
 		})
@@ -61,7 +61,7 @@ func (plan *Plan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jsonPlan)
 }
 
-func newJsonNode(ref *NodeRef) *JsonNode {
+func newJsonNode(ref *_NodeRef) *JsonNode {
 	node := new(JsonNode)
 	node.Name = ref.NodeName
 	node.Type = ref.NodeType
@@ -84,15 +84,15 @@ func (plan *Plan) UnmarshalJSON(bytes []byte) error {
 	}
 
 	graph := newDAG()
-	for _, part := range jsonPlan.Parts {
+	for _, part := range jsonPlan.Graph {
 		parseRefFromJsonNode(part.Node, graph)
 
-		graph.Vertexes[part.Node.Name] = &Vertex{
+		graph.Vertexes[part.Node.Name] = &_Vertex{
 			RefRoot: graph.NodeRefs[part.Node.Name],
 		}
 	}
 
-	for _, part := range jsonPlan.Parts {
+	for _, part := range jsonPlan.Graph {
 		if graph.Vertexes[part.Node.Name] == nil {
 			continue
 		}
@@ -119,12 +119,12 @@ func (plan *Plan) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func parseRefFromJsonNode(node *JsonNode, graph *DAG) *NodeRef {
+func parseRefFromJsonNode(node *JsonNode, graph *_DAG) *_NodeRef {
 	if graph.NodeRefs[node.Name] != nil {
 		return graph.NodeRefs[node.Name]
 	}
 
-	ref := &NodeRef{
+	ref := &_NodeRef{
 		NodeName: node.Name,
 		NodeType: node.Type,
 		Wrappers: node.Wrappers,

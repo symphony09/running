@@ -21,7 +21,7 @@ func NewDefaultEngine() *Engine {
 
 		plans: map[string]*Plan{},
 
-		pools: map[string]*WorkerPool{},
+		pools: map[string]*_WorkerPool{},
 	}
 }
 
@@ -66,7 +66,7 @@ type Engine struct {
 
 	plans map[string]*Plan
 
-	pools map[string]*WorkerPool
+	pools map[string]*_WorkerPool
 }
 
 // RegisterNodeBuilder register node builder to engine
@@ -120,7 +120,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 
 		// set worker pool for new plan
 		if engine.pools[name] == nil {
-			engine.pools[name] = &WorkerPool{
+			engine.pools[name] = &_WorkerPool{
 				sync.Pool{
 					New: func() interface{} {
 						worker, err := engine.buildWorker(name)
@@ -145,7 +145,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 		outputCh <- output
 
 		// if the plan has not been updated, reuse the worker
-		if worker.version == engine.plans[name].version {
+		if worker.Version == engine.plans[name].version {
 			engine.pools[name].Put(worker)
 		}
 	}()
@@ -175,7 +175,7 @@ func (engine *Engine) ClearPool(name string) {
 	engine.pools[name] = nil
 }
 
-func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
+func (engine *Engine) buildWorker(name string) (worker *_Worker, err error) {
 	plan := engine.plans[name]
 
 	plan.locker.RLock()
@@ -202,11 +202,11 @@ func (engine *Engine) buildWorker(name string) (worker *Worker, err error) {
 		plan.locker.RLock()
 	}
 
-	worker = &Worker{
-		works:        NewWorkList(plan.graph),
-		nodes:        nodeMap,
-		stateBuilder: engine.StateBuilder,
-		version:      plan.version,
+	worker = &_Worker{
+		Works:        newWorkList(plan.graph),
+		Nodes:        nodeMap,
+		StateBuilder: engine.StateBuilder,
+		Version:      plan.version,
 	}
 	return
 }

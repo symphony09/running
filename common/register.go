@@ -1,3 +1,4 @@
+// Package common implement some node, cluster, state for common usage
 package common
 
 import "github.com/symphony09/running"

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/symphony09/running"
+	"github.com/symphony09/running/common"
 	"github.com/symphony09/running/utils"
 )
 
@@ -115,7 +116,7 @@ func TestBase(t *testing.T) {
 
 func TestOverlayState(t *testing.T) {
 	upper, lower := running.NewStandardState(), running.NewStandardState()
-	overlay := running.NewOverlayState(lower, upper)
+	overlay := common.NewOverlayState(lower, upper)
 	helper1, helper2 := utils.ProxyState(overlay), utils.ProxyState(lower)
 
 	lower.Update("a", 1)
