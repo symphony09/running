@@ -30,13 +30,13 @@ func TestLoopCluster(t *testing.T) {
 
 	plan := running.NewPlan(props, nil, ops...)
 
-	err := running.Global.RegisterPlan("TestLoopCluster", plan)
+	err := running.RegisterPlan("TestLoopCluster", plan)
 	if err != nil {
 		t.Errorf("failed to register plan")
 		return
 	}
 
-	out := <-running.Global.ExecPlan("TestLoopCluster", context.Background())
+	out := <-running.ExecPlan("TestLoopCluster", context.Background())
 
 	if out.Err != nil {
 		t.Errorf("exec plan failed,err=%s", out.Err.Error())

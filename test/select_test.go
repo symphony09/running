@@ -29,13 +29,13 @@ func TestSelectCluster(t *testing.T) {
 
 	plan := running.NewPlan(props, nil, ops...)
 
-	err := running.Global.RegisterPlan("TestSelectCluster", plan)
+	err := running.RegisterPlan("TestSelectCluster", plan)
 	if err != nil {
 		t.Errorf("failed to register plan")
 		return
 	}
 
-	out := <-running.Global.ExecPlan("TestSelectCluster", context.Background())
+	out := <-running.ExecPlan("TestSelectCluster", context.Background())
 
 	if out.Err != nil {
 		t.Errorf("exec plan failed,err=%s", out.Err.Error())

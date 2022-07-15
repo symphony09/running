@@ -27,7 +27,7 @@ func TestBase(t *testing.T) {
 
 	plan := running.NewPlan(props, nil, ops...)
 
-	err := running.Global.RegisterPlan("Base", plan)
+	err := running.RegisterPlan("Base", plan)
 	if err != nil {
 		t.Errorf("register plan failed, err=%s", err.Error())
 		return
@@ -36,7 +36,7 @@ func TestBase(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Millisecond)
 	defer cancel()
 
-	output := <-running.Global.ExecPlan("Base", ctx)
+	output := <-running.ExecPlan("Base", ctx)
 	if output.Err != nil {
 		t.Errorf("exec plan failed, err=%s", output.Err.Error())
 		return
@@ -66,7 +66,7 @@ func TestBase(t *testing.T) {
 		t.Errorf("expect B6 run count = 0, but got %d", len(sum.Logs["B6"]))
 	}
 
-	err = running.Global.UpdatePlan("Base", func(plan *running.Plan) {
+	err = running.UpdatePlan("Base", func(plan *running.Plan) {
 		plan.Props = running.StandardProps(map[string]interface{}{
 			"S1.key":   "test_key",
 			"S1.value": "test_value2",
@@ -81,7 +81,7 @@ func TestBase(t *testing.T) {
 		return
 	}
 
-	output = <-running.Global.ExecPlan("Base", ctx)
+	output = <-running.ExecPlan("Base", ctx)
 	if value := utils.ProxyState(output.State).GetString("test_key"); value != "test_value" {
 		t.Errorf("expect state value = test_value, but got %s", value)
 	}
@@ -103,7 +103,7 @@ func TestBase(t *testing.T) {
 		return
 	}
 
-	output = <-running.Global.ExecPlan("Base", ctx)
+	output = <-running.ExecPlan("Base", ctx)
 	if value := utils.ProxyState(output.State).GetString("test_key"); value != "test_value2" {
 		t.Errorf("expect state value = test_value2, but got %s", value)
 	}
@@ -165,13 +165,13 @@ func TestPanic(t *testing.T) {
 
 	plan := running.NewPlan(nil, nil, ops...)
 
-	err := running.Global.RegisterPlan("TestPanic", plan)
+	err := running.RegisterPlan("TestPanic", plan)
 	if err != nil {
 		t.Errorf("register plan failed, err=%s", err.Error())
 		return
 	}
 
-	output := <-running.Global.ExecPlan("TestPanic", context.Background())
+	output := <-running.ExecPlan("TestPanic", context.Background())
 	if output.Err != nil {
 		fmt.Printf("exec plan failed, err=%s\n", output.Err.Error())
 

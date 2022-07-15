@@ -18,13 +18,13 @@ func TestSerialCluster(t *testing.T) {
 
 	plan := running.NewPlan(running.EmptyProps{}, nil, ops...)
 
-	err := running.Global.RegisterPlan("TestSerialCluster", plan)
+	err := running.RegisterPlan("TestSerialCluster", plan)
 	if err != nil {
 		t.Errorf("failed to register plan")
 		return
 	}
 
-	output := <-running.Global.ExecPlan("TestSerialCluster", context.Background())
+	output := <-running.ExecPlan("TestSerialCluster", context.Background())
 
 	if output.Err != nil {
 		t.Errorf("exec plan failed,err=%s", output.Err.Error())

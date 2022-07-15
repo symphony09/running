@@ -35,7 +35,7 @@ func TestWrap(t *testing.T) {
 		return
 	}
 
-	output := <-running.Global.ExecPlan("TestWrap", context.Background())
+	output := <-running.ExecPlan("TestWrap", context.Background())
 	if output.Err != nil {
 		t.Errorf("exec plan failed, err=%s", output.Err.Error())
 		return

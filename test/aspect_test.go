@@ -38,13 +38,13 @@ func TestAspectCluster(t *testing.T) {
 
 	plan := running.NewPlan(props, nil, ops...)
 
-	err := running.Global.RegisterPlan("TestAspectCluster", plan)
+	err := running.RegisterPlan("TestAspectCluster", plan)
 	if err != nil {
 		t.Errorf("failed to register plan")
 		return
 	}
 
-	output := <-running.Global.ExecPlan("TestAspectCluster", context.Background())
+	output := <-running.ExecPlan("TestAspectCluster", context.Background())
 
 	if output.Err != nil {
 		t.Errorf("exec plan failed,err=%s", output.Err.Error())

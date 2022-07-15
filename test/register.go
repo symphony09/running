@@ -6,13 +6,13 @@ import (
 )
 
 func init() {
-	running.Global.RegisterNodeBuilder("BaseTest", func(name string, props running.Props) (running.Node, error) {
+	running.RegisterNodeBuilder("BaseTest", func(name string, props running.Props) (running.Node, error) {
 		node := new(BaseTestNode)
 		node.SetName(name)
 		return node, nil
 	})
 
-	running.Global.RegisterNodeBuilder("SetState", func(name string, props running.Props) (running.Node, error) {
+	running.RegisterNodeBuilder("SetState", func(name string, props running.Props) (running.Node, error) {
 		node := new(SetStateNode)
 		node.SetName(name)
 

@@ -34,13 +34,13 @@ func TestMergeCluster(t *testing.T) {
 
 	plan := running.NewPlan(props, nil, ops...)
 
-	err := running.Global.RegisterPlan("TestMergeCluster", plan)
+	err := running.RegisterPlan("TestMergeCluster", plan)
 	if err != nil {
 		t.Errorf("failed to register plan")
 		return
 	}
 
-	output := <-running.Global.ExecPlan("TestMergeCluster", context.Background())
+	output := <-running.ExecPlan("TestMergeCluster", context.Background())
 
 	if output.Err != nil {
 		t.Errorf("exec plan failed,err=%s", output.Err.Error())

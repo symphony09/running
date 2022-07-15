@@ -11,7 +11,7 @@ import (
 func TestSimpleNode(t *testing.T) {
 	x := 1
 
-	running.Global.RegisterNodeBuilder("Simple",
+	running.RegisterNodeBuilder("Simple",
 		common.NewSimpleNodeBuilder(func(ctx context.Context) {
 			x++
 		}))
@@ -23,13 +23,13 @@ func TestSimpleNode(t *testing.T) {
 
 	plan := running.NewPlan(nil, nil, ops...)
 
-	err := running.Global.RegisterPlan("TestSimpleNode", plan)
+	err := running.RegisterPlan("TestSimpleNode", plan)
 	if err != nil {
 		t.Errorf("failed to register plan")
 		return
 	}
 
-	<-running.Global.ExecPlan("TestSimpleNode", context.Background())
+	<-running.ExecPlan("TestSimpleNode", context.Background())
 
 	if x != 2 {
 		t.Errorf("expect x = 2, but got %d", x)
