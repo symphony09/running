@@ -6,7 +6,7 @@ import (
 )
 
 type JsonPlan struct {
-	Props map[string]interface{}
+	Props json.RawMessage
 
 	Graph []GraphNode
 }
@@ -32,11 +32,12 @@ type JsonNode struct {
 func (plan *Plan) MarshalJSON() ([]byte, error) {
 	jsonPlan := new(JsonPlan)
 
-	propsMap := make(map[string]interface{})
-	if props, ok := plan.Props.(StandardProps); ok {
-		propsMap = props
+	if serializable, ok := plan.Props.(json.Marshaler); ok {
+		propsData, err := serializable.MarshalJSON()
+		if err == nil {
+			jsonPlan.Props = propsData
+		}
 	}
-	jsonPlan.Props = propsMap
 
 	if plan.graph == nil {
 		if err := plan.Init(); err != nil {
@@ -114,7 +115,14 @@ func (plan *Plan) UnmarshalJSON(bytes []byte) error {
 	}
 
 	plan.graph = graph
-	plan.props = StandardProps(jsonPlan.Props)
+
+	propsMap := make(map[string]interface{})
+	err = json.Unmarshal(jsonPlan.Props, &propsMap)
+	if err != nil {
+		return err
+	} else {
+		plan.props = StandardProps(propsMap)
+	}
 
 	return nil
 }

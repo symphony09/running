@@ -2,6 +2,7 @@ package running
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 )
 
@@ -97,6 +98,11 @@ func (props StandardProps) Get(key string) (value interface{}, exists bool) {
 
 func (props StandardProps) SubGet(sub, key string) (value interface{}, exists bool) {
 	return props.Get(sub + "." + key)
+}
+
+func (props StandardProps) MarshalJSON() ([]byte, error) {
+	propsMap := map[string]interface{}(props)
+	return json.Marshal(propsMap)
 }
 
 type EmptyProps struct{}
