@@ -15,4 +15,6 @@ func init() {
 	running.RegisterNodeBuilder("Merge", NewMergeCluster)
 
 	running.RegisterNodeBuilder("Switch", NewSwitchCluster)
+
+	running.RegisterNodeBuilder("Async", NewAsyncWrapper)
 }

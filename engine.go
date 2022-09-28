@@ -307,7 +307,7 @@ func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reus
 	return rootNode, nil
 }
 
-func (engine Engine) wrapNode(target Node, wrappers []string, props Props) (Node, error) {
+func (engine *Engine) wrapNode(target Node, wrappers []string, props Props) (Node, error) {
 	for _, wrapper := range wrappers {
 		if builder := engine.builders[wrapper]; builder != nil {
 			node, err := builder(target.Name(), props)

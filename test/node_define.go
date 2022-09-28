@@ -54,3 +54,21 @@ func (wrapper *TimerWrapper) Run(ctx context.Context) {
 
 	fmt.Printf("Node %s cost %d ms\n", wrapper.Target.Name(), time.Since(start).Milliseconds())
 }
+
+type HighCostNode struct {
+	running.Base
+}
+
+func (node *HighCostNode) Run(ctx context.Context) {
+	fmt.Println(node.Name() + " start")
+	time.Sleep(time.Second)
+	fmt.Println(node.Name() + " end")
+}
+
+func (node *HighCostNode) Clone() running.Node {
+	return &HighCostNode{
+		Base: running.Base{
+			NodeName: node.Name() + "_clone",
+		},
+	}
+}

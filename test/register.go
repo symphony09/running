@@ -34,4 +34,11 @@ func init() {
 		node := new(TimerWrapper)
 		return node, nil
 	})
+
+	running.RegisterNodeBuilder("HighCost", func(name string, props running.Props) (running.Node, error) {
+		node := new(HighCostNode)
+		node.SetName(name)
+
+		return node, nil
+	})
 }
