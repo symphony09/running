@@ -38,12 +38,19 @@ type Stateful interface {
 	Bind(state State)
 }
 
-//Cloneable a class of nodes that can be cloned
+// Cloneable a class of nodes that can be cloned
 type Cloneable interface {
 	Node
 
 	// Clone self
 	Clone() Node
+}
+
+// Reversible a class of nodes that can be reverted
+type Reversible interface {
+	Node
+
+	Revert(ctx context.Context)
 }
 
 // Props provide build parameters for the node builder

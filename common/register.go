@@ -17,4 +17,6 @@ func init() {
 	running.RegisterNodeBuilder("Switch", NewSwitchCluster)
 
 	running.RegisterNodeBuilder("Async", NewAsyncWrapper)
+
+	running.RegisterNodeBuilder("Transactional", NewTransactionalCluster)
 }

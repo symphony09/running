@@ -30,11 +30,19 @@ type SetStateNode struct {
 	key string
 
 	value interface{}
+
+	originalValue interface{}
 }
 
 func (node *SetStateNode) Run(ctx context.Context) {
+	node.originalValue, _ = node.State.Query(node.key)
 	node.State.Update(node.key, node.value)
 	utils.AddLog(node.State, node.Name(), time.Now(), time.Now(), "", nil)
+}
+
+func (node *SetStateNode) Revert(ctx context.Context) {
+	node.State.Update(node.key, node.originalValue)
+	utils.AddLog(node.State, node.Name(), time.Now(), time.Now(), "value reverted", nil)
 }
 
 type NothingNode struct {
