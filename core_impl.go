@@ -63,6 +63,14 @@ func (base *Base) ResetSubNodes() {
 	}
 }
 
+func (base *Base) Revert(ctx context.Context) {
+	for _, node := range base.SubNodes {
+		if reversibleNode, ok := node.(Reversible); ok {
+			reversibleNode.Revert(ctx)
+		}
+	}
+}
+
 type BaseWrapper struct {
 	Target Node
 }
