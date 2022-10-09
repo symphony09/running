@@ -6,6 +6,7 @@ import (
 
 	"github.com/symphony09/running"
 	"github.com/symphony09/running/common"
+	"github.com/symphony09/running/utils"
 )
 
 func TestSimpleNode(t *testing.T) {
@@ -16,9 +17,15 @@ func TestSimpleNode(t *testing.T) {
 			x++
 		}))
 
+	running.RegisterNodeBuilder("SimpleState",
+		common.NewSimpleStatefulNodeBuilder(func(ctx context.Context, state running.State) {
+			state.Update("x", x)
+		}))
+
 	ops := []running.Option{
 		running.AddNodes("Simple", "Simple1"),
-		running.LinkNodes("Simple1"),
+		running.AddNodes("SimpleState", "Simple2"),
+		running.LinkNodes("Simple1", "Simple2"),
 	}
 
 	plan := running.NewPlan(nil, nil, ops...)
@@ -29,7 +36,15 @@ func TestSimpleNode(t *testing.T) {
 		return
 	}
 
-	<-running.ExecPlan("TestSimpleNode", context.Background())
+	output := <-running.ExecPlan("TestSimpleNode", context.Background())
+	if output.Err != nil {
+		t.Errorf("exec plan failed,err=%s", output.Err.Error())
+	} else {
+		x := utils.ProxyState(output.State).GetInt("x")
+		if x != 2 {
+			t.Errorf("expect x = 2, but got %d", x)
+		}
+	}
 
 	if x != 2 {
 		t.Errorf("expect x = 2, but got %d", x)
