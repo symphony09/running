@@ -2,20 +2,34 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/symphony09/running"
+	"github.com/symphony09/running/common"
 )
 
 func TestAsyncWrapper(t *testing.T) {
+	running.RegisterNodeBuilder("Boom",
+		common.NewSimpleNodeBuilder(func(ctx context.Context) {
+			panic("Boom!")
+		}))
+
 	ops := []running.Option{
 		running.AddNodes("HighCost", "C1"),
-		running.WrapNodes("Async", "C1"),
-		running.SLinkNodes("C1", "END"),
+		running.AddNodes("Boom", "B1"),
+		running.WrapNodes("Async", "C1", "B1"),
+		running.SLinkNodes("C1", "B1", "END"),
 	}
 
-	plan := running.NewPlan(nil, nil, ops...)
+	props := running.StandardProps{
+		"B1.panic_handler": func(ctx context.Context, nodeName string, v interface{}) {
+			fmt.Printf("%s recover from %v\n", nodeName, v)
+		},
+	}
+
+	plan := running.NewPlan(props, nil, ops...)
 
 	err := running.RegisterPlan("TestAsyncWrapper", plan)
 	if err != nil {

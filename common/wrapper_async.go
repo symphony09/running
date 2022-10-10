@@ -10,10 +10,19 @@ type AsyncWrapper struct {
 	running.BaseWrapper
 
 	running.State
+
+	PanicHandler func(ctx context.Context, nodeName string, v interface{})
 }
 
 func NewAsyncWrapper(name string, props running.Props) (running.Node, error) {
-	return new(AsyncWrapper), nil
+	wrapper := new(AsyncWrapper)
+
+	handler, _ := props.SubGet(name, "panic_handler")
+	if method, ok := handler.(func(ctx context.Context, nodeName string, v interface{})); ok {
+		wrapper.PanicHandler = method
+	}
+
+	return wrapper, nil
 }
 
 func (wrapper *AsyncWrapper) Run(ctx context.Context) {
@@ -29,6 +38,14 @@ func (wrapper *AsyncWrapper) Run(ctx context.Context) {
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				if wrapper.PanicHandler != nil {
+					wrapper.PanicHandler(ctx, node.Name(), r)
+				}
+			}
+		}()
+
 		node.Run(ctx)
 		node.Reset()
 	}()
