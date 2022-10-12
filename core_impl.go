@@ -108,6 +108,15 @@ func (props StandardProps) SubGet(sub, key string) (value interface{}, exists bo
 	return props.Get(sub + "." + key)
 }
 
+func (props StandardProps) Copy() Props {
+	cp := make(map[string]interface{})
+	for k, v := range props {
+		cp[k] = v
+	}
+
+	return StandardProps(cp)
+}
+
 func (props StandardProps) MarshalJSON() ([]byte, error) {
 	propsMap := map[string]interface{}(props)
 	return json.Marshal(propsMap)
@@ -121,6 +130,10 @@ func (props EmptyProps) Get(key string) (value interface{}, exists bool) {
 
 func (props EmptyProps) SubGet(sub, key string) (value interface{}, exists bool) {
 	return
+}
+
+func (props EmptyProps) Copy() Props {
+	return EmptyProps{}
 }
 
 type StandardState struct {

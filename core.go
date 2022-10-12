@@ -60,6 +60,9 @@ type Props interface {
 
 	//SubGet node value of the key, deliver node name as sub
 	SubGet(sub, key string) (interface{}, bool)
+
+	// Copy safe use of copies
+	Copy() Props
 }
 
 type BuildNodeFunc func(name string, props Props) (Node, error)

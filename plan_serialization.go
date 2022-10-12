@@ -32,16 +32,16 @@ type JsonNode struct {
 func (plan *Plan) MarshalJSON() ([]byte, error) {
 	jsonPlan := new(JsonPlan)
 
-	if serializable, ok := plan.Props.(json.Marshaler); ok {
-		propsData, err := serializable.MarshalJSON()
-		if err == nil {
-			jsonPlan.Props = propsData
-		}
-	}
-
 	if plan.graph == nil {
 		if err := plan.Init(); err != nil {
 			return nil, err
+		}
+	}
+
+	if serializable, ok := plan.props.(json.Marshaler); ok {
+		propsData, err := serializable.MarshalJSON()
+		if err == nil {
+			jsonPlan.Props = propsData
 		}
 	}
 
@@ -122,6 +122,7 @@ func (plan *Plan) UnmarshalJSON(bytes []byte) error {
 		return err
 	} else {
 		plan.props = StandardProps(propsMap)
+		plan.Props = plan.props.Copy()
 	}
 
 	return nil

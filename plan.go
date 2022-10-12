@@ -63,7 +63,11 @@ func (plan *Plan) Init() error {
 
 	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
 	plan.graph = graph
-	plan.props = plan.Props
+	if plan.Props != nil {
+		plan.props = plan.Props.Copy()
+	} else {
+		plan.props = EmptyProps{}
+	}
 	plan.prebuilt = make(map[string]Node)
 
 	for _, node := range plan.Prebuilt {
