@@ -3,6 +3,7 @@ package running
 import (
 	"context"
 	"fmt"
+	"sync"
 )
 
 const (
@@ -60,6 +61,8 @@ type _WorkList struct {
 	terminate chan string
 
 	Items map[string]*_WorkItem
+
+	sync.RWMutex
 }
 
 type _WorkItem struct {
@@ -96,15 +99,22 @@ func newWorkList(graph *_DAG) *_WorkList {
 }
 
 func (list *_WorkList) TODO() <-chan string {
+	list.Lock()
+
 	list.todo = make(chan string, len(list.Items))
 	list.done = make(chan string, len(list.Items))
 	list.completed = make(chan struct{}, 1)
 	list.terminate = make(chan string, len(list.Items))
 
+	list.Unlock()
+
 	// find node ready to run
 	list.feed()
 
 	go func() {
+		list.RLock()
+		defer list.RUnlock()
+
 		for {
 			select {
 			case name := <-list.done:

@@ -72,11 +72,15 @@ type Engine struct {
 	plans map[string]*Plan
 
 	pools map[string]*_WorkerPool
+
+	buildersLocker, plansLocker, poolsLocker sync.RWMutex
 }
 
 // RegisterNodeBuilder register node builder to engine
 func (engine *Engine) RegisterNodeBuilder(name string, builder BuildNodeFunc) {
+	engine.buildersLocker.Lock()
 	engine.builders[name] = builder
+	engine.buildersLocker.Unlock()
 }
 
 // RegisterPlan register plan to engine
@@ -85,7 +89,9 @@ func (engine *Engine) RegisterPlan(name string, plan *Plan) error {
 	if err != nil {
 		return err
 	}
+	engine.plansLocker.Lock()
 	engine.plans[name] = plan
+	engine.plansLocker.Unlock()
 	return nil
 }
 
@@ -106,7 +112,9 @@ func (engine *Engine) LoadPlanFromJson(name string, jsonData []byte, prebuilt []
 	}
 	plan.version = strconv.FormatInt(time.Now().Unix(), 10)
 
+	engine.plansLocker.Lock()
 	engine.plans[name] = plan
+	engine.plansLocker.Unlock()
 	return nil
 }
 
@@ -120,15 +128,23 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 	}
 
 	go func() {
-		if engine.plans[name] == nil {
+		engine.plansLocker.RLock()
+		plan := engine.plans[name]
+		engine.plansLocker.RUnlock()
+
+		if plan == nil {
 			output.Err = fmt.Errorf("plan not found, name: %s", name)
 			outputCh <- output
 			return
 		}
 
+		engine.poolsLocker.RLock()
+		pool := engine.pools[name]
+		engine.poolsLocker.RUnlock()
+
 		// set worker pool for new plan
-		if engine.pools[name] == nil {
-			engine.pools[name] = &_WorkerPool{
+		if pool == nil {
+			pool = &_WorkerPool{
 				sync.Pool{
 					New: func() interface{} {
 						worker, err := engine.buildWorker(name)
@@ -140,10 +156,14 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 					},
 				},
 			}
+
+			engine.poolsLocker.Lock()
+			engine.pools[name] = pool
+			engine.poolsLocker.Unlock()
 		}
 
 		// get worker from pool and work
-		worker, err := engine.pools[name].GetWorker()
+		worker, err := pool.GetWorker()
 		if err != nil {
 			output.Err = err
 			outputCh <- output
@@ -153,8 +173,11 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 		outputCh <- output
 
 		// if the plan has not been updated, reuse the worker
-		if worker.Version == engine.plans[name].version {
-			engine.pools[name].Put(worker)
+		plan.locker.RLock()
+		version := plan.version
+		plan.locker.RUnlock()
+		if worker.Version == version {
+			pool.Put(worker)
 		}
 	}()
 
@@ -163,7 +186,9 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 
 // UpdatePlan update plan register in engine
 func (engine *Engine) UpdatePlan(name string, update func(plan *Plan)) error {
+	engine.plansLocker.RLock()
 	plan := engine.plans[name]
+	engine.plansLocker.RUnlock()
 
 	plan.locker.Lock()
 	update(plan)
@@ -178,8 +203,12 @@ func (engine *Engine) UpdatePlan(name string, update func(plan *Plan)) error {
 }
 
 func (engine *Engine) ExportPlan(name string) ([]byte, error) {
-	if engine.plans[name] != nil {
-		return json.Marshal(engine.plans[name])
+	engine.plansLocker.RLock()
+	plan := engine.plans[name]
+	engine.plansLocker.RUnlock()
+
+	if plan != nil {
+		return json.Marshal(plan)
 	} else {
 		return nil, fmt.Errorf("plan: %s not found", name)
 	}
@@ -188,11 +217,15 @@ func (engine *Engine) ExportPlan(name string) ([]byte, error) {
 // ClearPool clear worker pool of plan, invoke it to make plan effect immediately after update
 // name: name of plan
 func (engine *Engine) ClearPool(name string) {
+	engine.poolsLocker.Lock()
 	engine.pools[name] = nil
+	engine.poolsLocker.Unlock()
 }
 
 func (engine *Engine) buildWorker(name string) (worker *_Worker, err error) {
+	engine.plansLocker.RLock()
 	plan := engine.plans[name]
+	engine.plansLocker.RUnlock()
 
 	plan.locker.RLock()
 	defer plan.locker.RUnlock()
@@ -231,6 +264,9 @@ func (engine *Engine) buildWorker(name string) (worker *_Worker, err error) {
 // prefix will be added to node name,
 // example: prefix = ClusterA, node name = SubNodeB => ClusterA.SubNodeB
 func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reuse map[string]Node) (Node, error) {
+	engine.buildersLocker.RLock()
+	defer engine.buildersLocker.RUnlock()
+
 	root := plan.graph.NodeRefs[nodeName]
 	props := plan.props
 	prebuilt := plan.prebuilt
@@ -321,6 +357,9 @@ func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reus
 }
 
 func (engine *Engine) wrapNode(target Node, wrappers []string, props Props) (Node, error) {
+	engine.buildersLocker.RLock()
+	defer engine.buildersLocker.RUnlock()
+
 	for _, wrapper := range wrappers {
 		if builder := engine.builders[wrapper]; builder != nil {
 			node, err := builder(target.Name(), props)
