@@ -45,6 +45,11 @@ func UpdatePlan(name string, update func(plan *Plan)) error {
 	return Global.UpdatePlan(name, update)
 }
 
+// ExportPlan export plan register in Global, return json bytes
+func ExportPlan(name string) ([]byte, error) {
+	return Global.ExportPlan(name)
+}
+
 // ClearPool clear worker pool of plan, invoke it to make plan effect immediately after update
 // name: name of plan
 func ClearPool(name string) {
@@ -170,6 +175,14 @@ func (engine *Engine) UpdatePlan(name string, update func(plan *Plan)) error {
 	}
 
 	return nil
+}
+
+func (engine *Engine) ExportPlan(name string) ([]byte, error) {
+	if engine.plans[name] != nil {
+		return json.Marshal(engine.plans[name])
+	} else {
+		return nil, fmt.Errorf("plan: %s not found", name)
+	}
 }
 
 // ClearPool clear worker pool of plan, invoke it to make plan effect immediately after update
