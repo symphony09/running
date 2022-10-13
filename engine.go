@@ -144,21 +144,22 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 
 		// set worker pool for new plan
 		if pool == nil {
-			pool = &_WorkerPool{
-				sync.Pool{
-					New: func() interface{} {
-						worker, err := engine.buildWorker(name)
-						if err != nil {
-							return err
-						} else {
-							return worker
-						}
-					},
-				},
-			}
-
 			engine.poolsLocker.Lock()
-			engine.pools[name] = pool
+			if engine.pools[name] == nil {
+				engine.pools[name] = &_WorkerPool{
+					sync.Pool{
+						New: func() interface{} {
+							worker, err := engine.buildWorker(name)
+							if err != nil {
+								return err
+							} else {
+								return worker
+							}
+						},
+					},
+				}
+			}
+			pool = engine.pools[name]
 			engine.poolsLocker.Unlock()
 		}
 
