@@ -73,6 +73,8 @@ func (base *Base) Revert(ctx context.Context) {
 
 type BaseWrapper struct {
 	Target Node
+
+	State State
 }
 
 func (wrapper *BaseWrapper) Wrap(target Node) {
@@ -88,10 +90,14 @@ func (wrapper *BaseWrapper) Run(ctx context.Context) {
 }
 
 func (wrapper *BaseWrapper) Reset() {
+	wrapper.State = nil
+
 	wrapper.Target.Reset()
 }
 
 func (wrapper *BaseWrapper) Bind(state State) {
+	wrapper.State = state
+
 	if statefulTarget, ok := wrapper.Target.(Stateful); ok {
 		statefulTarget.Bind(state)
 	}

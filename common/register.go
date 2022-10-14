@@ -19,4 +19,6 @@ func init() {
 	running.RegisterNodeBuilder("Async", NewAsyncWrapper)
 
 	running.RegisterNodeBuilder("Transactional", NewTransactionalCluster)
+
+	running.RegisterNodeBuilder("Debug", NewDebugWrapper)
 }
