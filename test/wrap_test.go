@@ -12,7 +12,7 @@ func TestWrap(t *testing.T) {
 		running.AddNodes("Loop", "L1", "L2"),
 		running.AddNodes("BaseTest", "B1"),
 		running.AddNodes("SetState", "S1"),
-		running.WrapNodes("TimerWrapper", "L1", "L2", "B1"),
+		running.WrapAllNodes("TimerWrapper"),
 		running.MergeNodes("L1", "B1"),
 		running.MergeNodes("L2", "B1"),
 		running.SLinkNodes("L1", "S1", "L2"),

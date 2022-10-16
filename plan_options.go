@@ -56,6 +56,20 @@ var WrapNodes = func(wrapper string, targets ...string) Option {
 	}
 }
 
+// WrapAllNodes wrap all nodes with single or multi wrappers,
+// will only affect nodes added before this
+var WrapAllNodes = func(wrappers ...string) Option {
+	return func(dag *_DAG) {
+		for _, wrapper := range wrappers {
+			for _, ref := range dag.NodeRefs {
+				if ref != nil {
+					ref.Wrappers = append(ref.Wrappers, wrapper)
+				}
+			}
+		}
+	}
+}
+
 // ReUseNodes reuse node to avoid unnecessary rebuilds,
 // fits nodes whose properties do not change and implements the clone method
 var ReUseNodes = func(nodes ...string) Option {
