@@ -4,7 +4,9 @@ import (
 	"context"
 	"log"
 	"os"
+	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/symphony09/running"
 )
@@ -34,13 +36,24 @@ func NewDebugWrapper(name string, props running.Props) (running.Node, error) {
 }
 
 func (wrapper *DebugWrapper) Run(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			wrapper.logger.Printf("%s panic\n %v\n stacktrace:\n %s\n",
+				wrapper.Target.Name(), r, string(debug.Stack()))
+
+			panic(r)
+		}
+	}()
+
 	wrapper.debug(ctx, true)
 
-	wrapper.logger.Printf("node: %s is start running\n", wrapper.Target.Name())
+	wrapper.logger.Printf("%s is start running.\n", wrapper.Target.Name())
+
+	start := time.Now()
 
 	wrapper.Target.Run(ctx)
 
-	wrapper.logger.Printf("node: %s is completed\n", wrapper.Target.Name())
+	wrapper.logger.Printf("%s is completed, cost %s.\n", wrapper.Target.Name(), time.Since(start).String())
 
 	wrapper.debug(ctx, false)
 }
