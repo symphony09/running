@@ -297,8 +297,14 @@ func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reus
 		return nil, fmt.Errorf("no builder found for type %s", root.NodeType)
 	}
 
-	if root.ReUse && prebuilt[nodeName] == nil {
-		reuse[nodeName] = rootNode
+	if root.ReUse {
+		if _, ok := prebuilt[nodeName]; !ok {
+			if cloneableNode, ok := rootNode.(Cloneable); ok {
+				reuse[nodeName] = cloneableNode.Clone()
+			} else {
+				reuse[nodeName] = nil
+			}
+		}
 	}
 
 	// inject sub-nodes for cluster
@@ -382,11 +388,8 @@ func getPrebuiltNode(prebuilt map[string]Node, nodeName string) Node {
 	var node Node
 
 	if prebuilt[nodeName] != nil {
-		// prefer get clone of prebuilt node
 		if cloneableNode, ok := prebuilt[nodeName].(Cloneable); ok {
 			node = cloneableNode.Clone()
-		} else {
-			node = prebuilt[nodeName]
 		}
 	}
 

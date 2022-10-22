@@ -51,6 +51,12 @@ type NothingNode struct {
 
 func (node *NothingNode) Run(ctx context.Context) {}
 
+func (node *NothingNode) Clone() running.Node {
+	clone := new(NothingNode)
+	clone.SetName(node.Name())
+	return clone
+}
+
 type TimerWrapper struct {
 	running.BaseWrapper
 }

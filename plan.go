@@ -71,7 +71,15 @@ func (plan *Plan) Init() error {
 	plan.prebuilt = make(map[string]Node)
 
 	for _, node := range plan.Prebuilt {
-		plan.prebuilt[node.Name()] = node
+		if node == nil {
+			continue
+		}
+
+		if cloneableNode, ok := node.(Cloneable); ok {
+			plan.prebuilt[node.Name()] = cloneableNode.Clone()
+		} else if plan.Strict {
+			return fmt.Errorf("prebuilt node %s didn't implement Cloneable", node.Name())
+		}
 	}
 
 	return nil

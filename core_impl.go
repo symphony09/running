@@ -27,11 +27,8 @@ func (base *Base) Name() string {
 }
 
 func (base *Base) Inject(nodes []Node) {
-	base.SubNodes = append(base.SubNodes, nodes...)
-
-	if base.SubNodesMap == nil {
-		base.SubNodesMap = make(map[string]Node)
-	}
+	base.SubNodes = nodes
+	base.SubNodesMap = make(map[string]Node)
 
 	for _, node := range nodes {
 		base.SubNodesMap[node.Name()] = node
