@@ -1,4 +1,25 @@
-# [](https://github.com/symphony09/running/compare/v0.1.2...v) (2022-10-15)
+# [](https://github.com/symphony09/running/compare/v0.2.1...v) (2022-10-23)
+
+
+### Bug Fixes
+
+* fix register node builder dead lock ([c5af743](https://github.com/symphony09/running/commit/c5af7437c5e0b0a9018a6e8fe8104b81057d560f))
+* fix the logic of prebuilt and reuse node ([997d9df](https://github.com/symphony09/running/commit/997d9dfca7709638a904032ade74e6387a020116))
+
+
+### Features
+
+* add wrap all nodes option ([3619b2c](https://github.com/symphony09/running/commit/3619b2c3fe7a688136210ab4c62abeb355b682d6))
+* support warmup worker pool ([f86467b](https://github.com/symphony09/running/commit/f86467bf2cbd0abc17b45f574141c2743243ba7d))
+
+
+### Performance Improvements
+
+* perf log content of debug wrapper ([03ba830](https://github.com/symphony09/running/commit/03ba8309ca00a4b67fec638ffc32efc9eef1290f))
+
+
+
+## [0.2.1](https://github.com/symphony09/running/compare/v0.1.2...v0.2.1) (2022-10-15)
 
 
 ### Bug Fixes
