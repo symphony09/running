@@ -382,9 +382,6 @@ func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reus
 }
 
 func (engine *Engine) wrapNode(target Node, wrappers []string, props Props) (Node, error) {
-	engine.buildersLocker.RLock()
-	defer engine.buildersLocker.RUnlock()
-
 	for _, wrapper := range wrappers {
 		if builder := engine.builders[wrapper]; builder != nil {
 			node, err := builder(target.Name(), props)
