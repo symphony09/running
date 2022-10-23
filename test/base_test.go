@@ -213,7 +213,7 @@ func TestReUseNodes(t *testing.T) {
 	}
 }
 
-func BenchmarkExecPlan(b *testing.B) {
+func init() {
 	ops := []running.Option{
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),
 		running.LinkNodes("N1", "N4"),
@@ -225,10 +225,14 @@ func BenchmarkExecPlan(b *testing.B) {
 
 	err := running.RegisterPlan("BenchmarkExecPlan", plan)
 	if err != nil {
-		b.Errorf("register plan failed, err=%s", err.Error())
+		panic(fmt.Errorf("register plan failed, err=%s", err.Error()))
 		return
 	}
 
+	running.WarmupPool("BenchmarkExecPlan", 100)
+}
+
+func BenchmarkExecPlan(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		running.ExecPlan("BenchmarkExecPlan", nil)
 	}

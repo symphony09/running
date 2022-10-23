@@ -50,6 +50,13 @@ func ExportPlan(name string) ([]byte, error) {
 	return Global.ExportPlan(name)
 }
 
+// WarmupPool warm up pool to avoid cold start
+// name: plan name
+// size: set size of worker buf queue
+func WarmupPool(name string, size int) {
+	Global.WarmupPool(name, size)
+}
+
 // ClearPool clear worker pool of plan, invoke it to make plan effect immediately after update
 // name: name of plan
 func ClearPool(name string) {
@@ -147,7 +154,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 			engine.poolsLocker.Lock()
 			if engine.pools[name] == nil {
 				engine.pools[name] = &_WorkerPool{
-					sync.Pool{
+					Pool: sync.Pool{
 						New: func() interface{} {
 							worker, err := engine.buildWorker(name)
 							if err != nil {
@@ -178,7 +185,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 		version := plan.version
 		plan.locker.RUnlock()
 		if worker.Version == version {
-			pool.Put(worker)
+			pool.PutWorker(worker)
 		}
 	}()
 
@@ -213,6 +220,17 @@ func (engine *Engine) ExportPlan(name string) ([]byte, error) {
 	} else {
 		return nil, fmt.Errorf("plan: %s not found", name)
 	}
+}
+
+// WarmupPool warm up pool to avoid cold start
+// name: plan name
+// size: set size of worker buf queue
+func (engine *Engine) WarmupPool(name string, size int) {
+	engine.poolsLocker.Lock()
+	if engine.pools[name] != nil {
+		engine.pools[name].Warmup(size)
+	}
+	engine.poolsLocker.Unlock()
 }
 
 // ClearPool clear worker pool of plan, invoke it to make plan effect immediately after update
