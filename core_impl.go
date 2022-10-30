@@ -2,7 +2,6 @@ package running
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 )
 
@@ -120,9 +119,8 @@ func (props StandardProps) Copy() Props {
 	return StandardProps(cp)
 }
 
-func (props StandardProps) MarshalJSON() ([]byte, error) {
-	propsMap := map[string]interface{}(props)
-	return json.Marshal(propsMap)
+func (props StandardProps) Raw() map[string]interface{} {
+	return props
 }
 
 type EmptyProps struct{}

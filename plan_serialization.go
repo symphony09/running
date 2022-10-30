@@ -38,10 +38,12 @@ func (plan *Plan) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if serializable, ok := plan.props.(json.Marshaler); ok {
-		propsData, err := serializable.MarshalJSON()
+	if exportable, ok := plan.props.(ExportableProps); ok {
+		propsData, err := json.Marshal(exportable.Raw())
 		if err == nil {
 			jsonPlan.Props = propsData
+		} else {
+			return nil, err
 		}
 	}
 

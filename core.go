@@ -65,6 +65,11 @@ type Props interface {
 	Copy() Props
 }
 
+// ExportableProps can be used to lookup raw data and serialization
+type ExportableProps interface {
+	Raw() map[string]interface{}
+}
+
 type BuildNodeFunc func(name string, props Props) (Node, error)
 
 // State store state of nodes
