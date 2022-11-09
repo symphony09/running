@@ -24,6 +24,10 @@ func RegisterNodes(e *running.Engine, nodes ...running.Node) error {
 	return nil
 }
 
+type Uninitialized interface {
+	Init() error
+}
+
 func parseNode(node running.Node) (typeName string, builder running.BuildNodeFunc, err error) {
 	nodeType := reflect.TypeOf(node)
 	if nodeType.Kind() == reflect.Ptr {
@@ -58,8 +62,32 @@ func parseNode(node running.Node) (typeName string, builder running.BuildNodeFun
 					}
 				}
 			}
-		} else if f.Type == reflect.TypeOf(running.Base{}) {
+		} else if f.Anonymous && f.Type == reflect.TypeOf(running.Base{}) {
 			baseField = f.Name
+		}
+
+		nodeVal := reflect.New(nodeType)
+		for fieldName := range autowired {
+			field := nodeVal.Elem().FieldByName(fieldName)
+
+			if !field.CanSet() {
+				err = fmt.Errorf("props field %s cannot be set", fieldName)
+				return
+			}
+		}
+
+		if nameField != "" {
+			field := nodeVal.Elem().FieldByName(nameField)
+
+			if field.Type().String() != "string" {
+				err = fmt.Errorf("name field %s must be string type", nameField)
+				return
+			}
+
+			if !field.CanSet() {
+				err = fmt.Errorf("name field %s cannot be set", nameField)
+				return
+			}
 		}
 	}
 
@@ -81,11 +109,6 @@ func parseNode(node running.Node) (typeName string, builder running.BuildNodeFun
 
 			field := newNodeVal.Elem().FieldByName(fieldName)
 
-			if !field.CanSet() {
-				err = fmt.Errorf("props field %s cannot be set", fieldName)
-				return
-			}
-
 			if field.Type() != reflect.TypeOf(val) {
 				err = fmt.Errorf("prop field type = %v, prop value type = %v", field.Type(), reflect.TypeOf(val))
 				return
@@ -95,25 +118,15 @@ func parseNode(node running.Node) (typeName string, builder running.BuildNodeFun
 		}
 
 		if nameField != "" {
-			field := newNodeVal.Elem().FieldByName(nameField)
-
-			if !field.CanSet() {
-				err = fmt.Errorf("name field %s cannot be set", nameField)
-				return
-			}
-
-			if field.Type() != reflect.TypeOf(name) {
-				err = fmt.Errorf("name field type should be string, got %v", field.Type())
-				return
-
-			}
-
-			field.Set(reflect.ValueOf(name))
+			newNodeVal.Elem().FieldByName(nameField).SetString(name)
 		}
 
 		if baseField != "" {
-			field := newNodeVal.Elem().FieldByName(baseField)
-			field.FieldByName("NodeName").Set(reflect.ValueOf(name))
+			newNodeVal.Elem().FieldByName(baseField).FieldByName("NodeName").SetString(name)
+		}
+
+		if uninitializedNode, ok := newNode.(Uninitialized); ok {
+			err = uninitializedNode.Init()
 		}
 
 		return

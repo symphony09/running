@@ -16,11 +16,17 @@ type HelloNode struct {
 	NodeName string `running:"name"`
 
 	Username string `running:"prop: username"`
+
+	msg string
+}
+
+func (node *HelloNode) Init() error {
+	node.msg = fmt.Sprintf("%s: Hello, %s", node.NodeName, node.Username)
+	return nil
 }
 
 func (node *HelloNode) Run(ctx context.Context) {
-	msg := fmt.Sprintf("%s: Hello, %s", node.NodeName, node.Username)
-	utils.AddLog(node.State, node.Name(), time.Now(), time.Now(), msg, nil)
+	utils.AddLog(node.State, node.Name(), time.Now(), time.Now(), node.msg, nil)
 }
 
 func TestNodeHelper(t *testing.T) {
