@@ -1,4 +1,21 @@
-# [](https://github.com/symphony09/running/compare/v0.2.1...v) (2022-10-23)
+# [](https://github.com/symphony09/running/compare/v0.2.2...v) (2022-11-11)
+
+
+### Features
+
+* support inspect engine info ([5602af4](https://github.com/symphony09/running/commit/5602af40f185d53ca18c5e69cd0aab8eaa8cc573))
+* support register node directly by utils ([6ba34c7](https://github.com/symphony09/running/commit/6ba34c77a04f6456a8db6bc937377494c41c61db))
+* support sub props by utils ([9ae8a3b](https://github.com/symphony09/running/commit/9ae8a3b9588aecb9ed6dae860bc9a4db75d2c0b2))
+
+
+### Performance Improvements
+
+* perf node register utils ([07b6bed](https://github.com/symphony09/running/commit/07b6bed31accd1cf6c71f35690c72ad130ebdaf6))
+* perf props serialization logic ([dc03833](https://github.com/symphony09/running/commit/dc0383300d67219f942ce76cfa7606a6e5ee5b1e))
+
+
+
+## [0.2.2](https://github.com/symphony09/running/compare/v0.2.1...v0.2.2) (2022-10-23)
 
 
 ### Bug Fixes
