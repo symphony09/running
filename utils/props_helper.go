@@ -7,6 +7,8 @@ import (
 )
 
 type PropsHelper struct {
+	SubKey string
+
 	Props running.Props
 }
 
@@ -14,9 +16,31 @@ func ProxyProps(props running.Props) PropsHelper {
 	return PropsHelper{Props: props}
 }
 
+func (helper PropsHelper) Sub(subKey string) PropsHelper {
+	helper.SubKey = subKey
+	return helper
+}
+
+func (helper PropsHelper) GetRaw(key string) (value interface{}) {
+	if helper.Props == nil {
+		return
+	}
+
+	if helper.SubKey != "" {
+		return helper.SubGetRaw(helper.SubKey, key)
+	}
+
+	raw, _ := helper.Props.Get(key)
+	return raw
+}
+
 func (helper PropsHelper) GetString(key string) (value string) {
 	if helper.Props == nil {
 		return
+	}
+
+	if helper.SubKey != "" {
+		return helper.SubGetString(helper.SubKey, key)
 	}
 
 	raw, _ := helper.Props.Get(key)
@@ -28,6 +52,10 @@ func (helper PropsHelper) GetInt(key string) (value int) {
 		return
 	}
 
+	if helper.SubKey != "" {
+		return helper.SubGetInt(helper.SubKey, key)
+	}
+
 	raw, _ := helper.Props.Get(key)
 	return tranInt(raw)
 }
@@ -35,6 +63,10 @@ func (helper PropsHelper) GetInt(key string) (value int) {
 func (helper PropsHelper) GetFloat(key string) (value float64) {
 	if helper.Props == nil {
 		return
+	}
+
+	if helper.SubKey != "" {
+		return helper.SubGetFloat(helper.SubKey, key)
 	}
 
 	raw, _ := helper.Props.Get(key)
@@ -46,6 +78,10 @@ func (helper PropsHelper) GetBool(key string) (value bool) {
 		return
 	}
 
+	if helper.SubKey != "" {
+		return helper.SubGetBool(helper.SubKey, key)
+	}
+
 	raw, _ := helper.Props.Get(key)
 	return tranBool(raw)
 }
@@ -55,9 +91,22 @@ func (helper PropsHelper) GetBytes(key string) (value []byte) {
 		return
 	}
 
+	if helper.SubKey != "" {
+		return helper.SubGetBytes(helper.SubKey, key)
+	}
+
 	raw, _ := helper.Props.Get(key)
 	value, _ = raw.([]byte)
 	return
+}
+
+func (helper PropsHelper) SubGetRaw(sub, key string) (value interface{}) {
+	if helper.Props == nil {
+		return
+	}
+
+	raw, _ := helper.Props.SubGet(sub, key)
+	return raw
 }
 
 func (helper PropsHelper) SubGetString(sub, key string) (value string) {
