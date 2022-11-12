@@ -32,7 +32,7 @@ func (worker _Worker) Work(ctx context.Context) <-chan Output {
 		go func(nodeName string) {
 			defer func() {
 				if err := recover(); err != nil {
-					output.Err = fmt.Errorf("work panic: %v", err)
+					output.Err = fmt.Errorf("%s panic: %v", nodeName, err)
 					worker.Works.Terminate(nodeName)
 				} else {
 					worker.Works.Done(nodeName)
