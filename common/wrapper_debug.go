@@ -106,7 +106,7 @@ func (wrapper *DebugWrapper) debug(ctx context.Context, before bool) {
 					wrapper.logger.Printf("found %s in state(before) of %s, type = %T\tvalue = %v\n",
 						key, wrapper.Target.Name(), v, v)
 				} else {
-					wrapper.logger.Printf("%s in state(before) of %s had been set to nil")
+					wrapper.logger.Printf("%s in state(before) of %s had been set to nil\n", key, wrapper.Target.Name())
 				}
 
 			} else {
@@ -121,7 +121,7 @@ func (wrapper *DebugWrapper) debug(ctx context.Context, before bool) {
 					wrapper.logger.Printf("found %s in state(after) of %s, type = %T\tvalue = %v\n",
 						key, wrapper.Target.Name(), v, v)
 				} else {
-					wrapper.logger.Printf("%s in state(after) of %s had been set to nil")
+					wrapper.logger.Printf("%s in state(after) of %s had been set to nil\n", key, wrapper.Target.Name())
 				}
 			} else {
 				wrapper.logger.Printf("%s not found in state(after) of %s\n",

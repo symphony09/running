@@ -57,7 +57,7 @@ func TestBase(t *testing.T) {
 		t.Error("B2 end before B3 start")
 	}
 	if sum.Logs["B1"][0].Msg != "success" {
-		t.Errorf("expect B1 success, but got %s", sum.Logs["B5"][0].Msg)
+		t.Errorf("expect B1 success, but got %s", sum.Logs["B1"][0].Msg)
 	}
 	if sum.Logs["B5"][0].Msg != "timeout" {
 		t.Errorf("expect B5 timeout, but got %s", sum.Logs["B5"][0].Msg)
