@@ -24,6 +24,17 @@ func RegisterNodes(e *running.Engine, nodes ...running.Node) error {
 	return nil
 }
 
+// RegisterNodeWithTypeName similar to RegisterNodes, but specify the type name of node
+func RegisterNodeWithTypeName(e *running.Engine, typeName string, node running.Node) error {
+	_, builder, err := parseNode(node)
+	if err != nil {
+		return err
+	} else {
+		e.RegisterNodeBuilder(typeName, builder)
+		return nil
+	}
+}
+
 type Uninitialized interface {
 	Init() error
 }
