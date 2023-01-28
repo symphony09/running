@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -174,6 +175,10 @@ func TestPanic(t *testing.T) {
 	output := <-running.ExecPlan("TestPanic", context.Background())
 	if output.Err != nil {
 		fmt.Printf("exec plan failed, err=%s\n", output.Err.Error())
+
+		if !errors.Is(output.Err, running.ErrWorkerPanic) {
+			t.Errorf("expect WorkPanicError, but got %t", err)
+		}
 
 		sum := utils.GetRunSummary(output.State)
 		if len(sum.Logs["T1"]) != 0 {

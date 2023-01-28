@@ -78,7 +78,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 		engine.plansLocker.RUnlock()
 
 		if plan == nil {
-			output.Err = fmt.Errorf("plan not found, name: %s", name)
+			output.Err = ErrPlanNotFound
 			outputCh <- output
 			return
 		}
@@ -96,7 +96,7 @@ func (engine *Engine) ExecPlan(name string, ctx context.Context) <-chan Output {
 						New: func() interface{} {
 							worker, err := engine.buildWorker(name)
 							if err != nil {
-								return err
+								return fmt.Errorf("%w, err: %s", ErrBuildWorkerFailed, err)
 							} else {
 								return worker
 							}
@@ -324,7 +324,8 @@ func (engine *Engine) wrapNode(target Node, wrappers []string, props Props) (Nod
 		if builder := engine.builders[wrapper]; builder != nil {
 			node, err := builder(target.Name(), props)
 			if err != nil {
-				return nil, fmt.Errorf("failed to build %s, err=%s", wrapper, err.Error())
+				return nil, fmt.Errorf("failed to build wrapper, wrapper name: %s, target name: %s, err: %s",
+					wrapper, target.Name(), err)
 			}
 
 			if wrapperNode, ok := node.(Wrapper); ok {
