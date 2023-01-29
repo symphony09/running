@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
@@ -186,6 +187,14 @@ func (engine *Engine) buildWorker(name string) (worker *_Worker, err error) {
 
 	plan.locker.RLock()
 	defer plan.locker.RUnlock()
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("engine panic when build worker, panic info: %v", r)
+			debug.PrintStack()
+			return
+		}
+	}()
 
 	nodeMap := map[string]Node{}
 	reuse := map[string]Node{} // collect nodes which can be reused in the build nodes process
