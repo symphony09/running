@@ -35,10 +35,23 @@ func NewDebugWrapper(name string, props running.Props) (running.Node, error) {
 	return wrapper, nil
 }
 
+func (wrapper *DebugWrapper) Bind(state running.State) {
+	defer func() {
+		if r := recover(); r != nil {
+			wrapper.logger.Printf("node panic when bind state, node name: %s, panic info: %v\n stacktrace:\n %s\n",
+				wrapper.Target.Name(), r, string(debug.Stack()))
+
+			panic(r)
+		}
+	}()
+
+	wrapper.BaseWrapper.Bind(state)
+}
+
 func (wrapper *DebugWrapper) Run(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
-			wrapper.logger.Printf("%s panic\n %v\n stacktrace:\n %s\n",
+			wrapper.logger.Printf("node panic when running, node name: %s, panic info: %v\n stacktrace:\n %s\n",
 				wrapper.Target.Name(), r, string(debug.Stack()))
 
 			panic(r)
@@ -129,4 +142,17 @@ func (wrapper *DebugWrapper) debug(ctx context.Context, before bool) {
 			}
 		}
 	}
+}
+
+func (wrapper *DebugWrapper) Reset() {
+	defer func() {
+		if r := recover(); r != nil {
+			wrapper.logger.Printf("node panic when reset, node name: %s, panic info: %v\n stacktrace:\n %s\n",
+				wrapper.Target.Name(), r, string(debug.Stack()))
+
+			panic(r)
+		}
+	}()
+
+	wrapper.BaseWrapper.Reset()
 }
