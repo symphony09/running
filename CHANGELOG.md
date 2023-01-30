@@ -1,4 +1,22 @@
-# [](https://github.com/symphony09/running/compare/v0.2.2...v) (2022-11-11)
+# [](https://github.com/symphony09/running/compare/v0.2.3...v) (2023-01-30)
+
+
+### Bug Fixes
+
+* fix bugs in debug wrapper and base test ([e6e2393](https://github.com/symphony09/running/commit/e6e2393054a5b45f709a4e0279436d7c074d26d3))
+
+
+### Performance Improvements
+
+* add node name to panic info ([7bd6475](https://github.com/symphony09/running/commit/7bd6475d96595dfa2216807314c70c8c2eabacf0))
+* debug wrapper cover more panic case ([2b5ce7b](https://github.com/symphony09/running/commit/2b5ce7b7e70ed207576209e7fe383306b27110d7))
+* handle build worker panic ([1c614e0](https://github.com/symphony09/running/commit/1c614e01ec522bf646fce312523885c38548b567))
+* perf error handing ([9780101](https://github.com/symphony09/running/commit/978010115d37c17cbada42695c3fb1937db0ab2f))
+* perf node register utils ([319c237](https://github.com/symphony09/running/commit/319c237d4803190ad922f76fb761d14508d54b81))
+
+
+
+## [0.2.3](https://github.com/symphony09/running/compare/v0.2.2...v0.2.3) (2022-11-11)
 
 
 ### Features
