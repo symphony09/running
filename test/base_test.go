@@ -218,6 +218,38 @@ func TestReUseNodes(t *testing.T) {
 	}
 }
 
+func TestSkipNodes(t *testing.T) {
+	plan := running.NewPlan(nil, nil,
+		running.AddNodes("HighCost", "H1"),
+		running.AddNodes("BaseTest", "B1", "B2"),
+		running.WrapAllNodes("Debug"),
+		running.RLinkNodes("B2", "B1", "H1"))
+
+	err := running.RegisterPlan("TestSkipNodes", plan)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	ctx := context.WithValue(context.Background(), running.CtxKey, running.CtxParams{SkipNodes: []string{"H1"}})
+
+	output := <-running.ExecPlan("TestSkipNodes", ctx)
+	if output.Err != nil {
+		t.Error(output.Err)
+	}
+
+	sum := utils.GetRunSummary(output.State)
+	if len(sum.Logs["B1"]) != 1 {
+		t.Errorf("expect B1 run count eq 1, but got %d", len(sum.Logs["B1"]))
+	}
+	if len(sum.Logs["B2"]) != 1 {
+		t.Errorf("expect B2 run count eq 1, but got %d", len(sum.Logs["B2"]))
+	}
+	if len(sum.Logs["H1"]) != 0 {
+		t.Errorf("expect N1 run count eq 0, but got %d", len(sum.Logs["H1"]))
+	}
+}
+
 func init() {
 	ops := []running.Option{
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),

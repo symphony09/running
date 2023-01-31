@@ -27,9 +27,24 @@ func (worker _Worker) Work(ctx context.Context) <-chan Output {
 	outputCh := make(chan Output, 1)
 	state := worker.StateBuilder()
 
+	skipNodes := make(map[string]struct{})
+	raw := ctx.Value(CtxKey)
+	if raw != nil {
+		if params, ok := raw.(CtxParams); ok {
+			for _, node := range params.SkipNodes {
+				skipNodes[node] = struct{}{}
+			}
+		}
+	}
+
 	// get node ready to run from a chan of works, block until all node done
 	for nodeName := range worker.Works.TODO() {
 		go func(nodeName string) {
+			if _, ok := skipNodes[nodeName]; ok {
+				worker.Works.Done(nodeName)
+				return
+			}
+
 			defer func() {
 				if err := recover(); err != nil {
 					output.Err = fmt.Errorf("%w, node name: %s, panic info: %v", ErrWorkerPanic, nodeName, err)

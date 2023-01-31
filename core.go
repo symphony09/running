@@ -91,3 +91,11 @@ type Output struct {
 
 	State State
 }
+
+type ctxKey string
+
+var CtxKey ctxKey = "rck"
+
+type CtxParams struct {
+	SkipNodes []string
+}
