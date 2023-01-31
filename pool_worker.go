@@ -172,6 +172,10 @@ func (list *_WorkList) clean() {
 
 	for _, item := range list.Items {
 		item.Status = _WorkStatusTodo
+		item.Prev = 0
+	}
+
+	for _, item := range list.Items {
 		for _, nextItem := range item.Next {
 			nextItem.Prev++
 		}
