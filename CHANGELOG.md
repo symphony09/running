@@ -1,4 +1,13 @@
-# [](https://github.com/symphony09/running/compare/v0.2.3...v) (2023-01-30)
+# [](https://github.com/symphony09/running/compare/v0.2.4...v) (2023-01-31)
+
+
+### Bug Fixes
+
+* clear the prev count before recount ([342d7cd](https://github.com/symphony09/running/commit/342d7cd674dcfbb493ff549ca89acbe85b388156))
+
+
+
+## [0.2.4](https://github.com/symphony09/running/compare/v0.2.3...v0.2.4) (2023-01-30)
 
 
 ### Bug Fixes
