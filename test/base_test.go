@@ -250,6 +250,55 @@ func TestSkipNodes(t *testing.T) {
 	}
 }
 
+func TestMarkNodes(t *testing.T) {
+	plan := running.NewPlan(nil, nil,
+		running.AddNodes("BaseTest", "B1", "B2", "B3", "B4", "B5", "B6"),
+		running.MarkNodes("group1", "B1", "B2", "B3", "B4"),
+		running.MarkNodes("group2", "B1", "B2"),
+		running.MarkNodes("group3", "B1", "B3", "B5"),
+		running.MarkNodes("group4", "B4", "B5"),
+		running.WrapAllNodes("Debug"),
+		running.LinkNodes("B1", "B2", "B3", "B4", "B5", "B6"))
+
+	err := running.RegisterPlan("TestMarkNodes", plan)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	ctx := context.WithValue(context.Background(), running.CtxKey,
+		running.CtxParams{
+			MatchAllLabels:   []string{"group1"},
+			MatchOneOfLabels: []string{"group2", "group3"},
+		})
+
+	output := <-running.ExecPlan("TestMarkNodes", ctx)
+	if output.Err != nil {
+		t.Error(output.Err)
+	}
+
+	// ( group1 ∩ group2 ) ∪ ( group1 ∩ group3 ) ∪ no labels = B1, B2, B3, B6
+	sum := utils.GetRunSummary(output.State)
+	if len(sum.Logs["B1"]) != 1 {
+		t.Errorf("expect B1 run count eq 1, but got %d", len(sum.Logs["B1"]))
+	}
+	if len(sum.Logs["B2"]) != 1 {
+		t.Errorf("expect B2 run count eq 1, but got %d", len(sum.Logs["B2"]))
+	}
+	if len(sum.Logs["B3"]) != 1 {
+		t.Errorf("expect B3 run count eq 1, but got %d", len(sum.Logs["B3"]))
+	}
+	if len(sum.Logs["B6"]) != 1 {
+		t.Errorf("expect B6 run count eq 1, but got %d", len(sum.Logs["B6"]))
+	}
+	if len(sum.Logs["B4"]) != 0 {
+		t.Errorf("expect B4 run count eq 0, but got %d", len(sum.Logs["B4"]))
+	}
+	if len(sum.Logs["B5"]) != 0 {
+		t.Errorf("expect B5 run count eq 0, but got %d", len(sum.Logs["B5"]))
+	}
+}
+
 func init() {
 	ops := []running.Option{
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),

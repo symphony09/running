@@ -27,10 +27,14 @@ func (worker _Worker) Work(ctx context.Context) <-chan Output {
 	outputCh := make(chan Output, 1)
 	state := worker.StateBuilder()
 
+	var ctxParam CtxParams
 	skipNodes := make(map[string]struct{})
+
 	raw := ctx.Value(CtxKey)
 	if raw != nil {
 		if params, ok := raw.(CtxParams); ok {
+			ctxParam = params
+
 			for _, node := range params.SkipNodes {
 				skipNodes[node] = struct{}{}
 			}
@@ -41,6 +45,11 @@ func (worker _Worker) Work(ctx context.Context) <-chan Output {
 	for nodeName := range worker.Works.TODO() {
 		go func(nodeName string) {
 			if _, ok := skipNodes[nodeName]; ok {
+				worker.Works.Done(nodeName)
+				return
+			}
+
+			if !worker.MatchNode(ctxParam, nodeName) {
 				worker.Works.Done(nodeName)
 				return
 			}
@@ -68,6 +77,39 @@ func (worker _Worker) Work(ctx context.Context) <-chan Output {
 	return outputCh
 }
 
+func (worker _Worker) MatchNode(params CtxParams, nodeName string) bool {
+	matchAllLabels := params.MatchAllLabels
+	matchOneOfLabels := params.MatchOneOfLabels
+	labels := worker.Works.Items[nodeName].Labels
+
+	if labels != nil {
+		if len(matchAllLabels) > 0 {
+			for _, label := range matchAllLabels {
+				if _, matched := labels[label]; !matched {
+					return false
+				}
+			}
+		}
+
+		if len(matchOneOfLabels) > 0 {
+			oneMatched := false
+
+			for _, label := range matchOneOfLabels {
+				if _, matched := labels[label]; matched {
+					oneMatched = true
+					break
+				}
+			}
+
+			if !oneMatched {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 type _WorkList struct {
 	todo, done chan string
 
@@ -82,6 +124,8 @@ type _WorkList struct {
 
 type _WorkItem struct {
 	Name string
+
+	Labels map[string]struct{}
 
 	Status int
 
@@ -98,6 +142,7 @@ func newWorkList(graph *_DAG) *_WorkList {
 	for name, vertex := range graph.Vertexes {
 		list.Items[name] = &_WorkItem{
 			Name:   name,
+			Labels: vertex.RefRoot.Labels,
 			Status: _WorkStatusTodo,
 			Prev:   vertex.Prev,
 			Next:   make([]*_WorkItem, 0),

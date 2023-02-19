@@ -82,6 +82,22 @@ var ReUseNodes = func(nodes ...string) Option {
 	}
 }
 
+// MarkNodes set label of nodes
+var MarkNodes = func(label string, nodes ...string) Option {
+	return func(dag *_DAG) {
+		for _, node := range nodes {
+			if dag.NodeRefs[node] != nil {
+				ref := dag.NodeRefs[node]
+				if ref.Labels == nil {
+					ref.Labels = make(map[string]struct{})
+				}
+
+				ref.Labels[label] = struct{}{}
+			}
+		}
+	}
+}
+
 // LinkNodes link first node with others.
 // example: LinkNodes("A", "B", "C") => A -> B, A -> C.
 var LinkNodes = func(nodes ...string) Option {

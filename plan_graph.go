@@ -122,6 +122,8 @@ type _NodeRef struct {
 	Wrappers []string
 
 	ReUse bool
+
+	Labels map[string]struct{}
 }
 
 const (
