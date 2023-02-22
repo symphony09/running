@@ -106,4 +106,6 @@ type CtxParams struct {
 	// MatchOneOfLabels the nodes with one of the specified labels will run.
 	// Does not work for nodes without labels
 	MatchOneOfLabels []string
+
+	State State
 }

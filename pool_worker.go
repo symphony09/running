@@ -25,8 +25,8 @@ type _Worker struct {
 func (worker _Worker) Work(ctx context.Context) <-chan Output {
 	output := Output{}
 	outputCh := make(chan Output, 1)
-	state := worker.StateBuilder()
 
+	var state State
 	var ctxParam CtxParams
 	skipNodes := make(map[string]struct{})
 
@@ -34,11 +34,16 @@ func (worker _Worker) Work(ctx context.Context) <-chan Output {
 	if raw != nil {
 		if params, ok := raw.(CtxParams); ok {
 			ctxParam = params
+			state = params.State
 
 			for _, node := range params.SkipNodes {
 				skipNodes[node] = struct{}{}
 			}
 		}
+	}
+
+	if state == nil {
+		state = worker.StateBuilder()
 	}
 
 	// get node ready to run from a chan of works, block until all node done

@@ -299,6 +299,42 @@ func TestMarkNodes(t *testing.T) {
 	}
 }
 
+func TestCtxWithState(t *testing.T) {
+	e := running.NewDefaultEngine()
+	e.RegisterNodeBuilder("Simple", common.NewSimpleStatefulNodeBuilder(func(ctx context.Context, state running.State) {
+		state.Update("data", 1)
+		state.Transform("data", func(from interface{}) interface{} {
+			return 2
+		})
+		state.Query("data")
+	}))
+
+	version := 0
+
+	state := common.NewHookState(nil, func(state running.State, event, key string, completed bool) {
+		if completed && event != "query" {
+			version++
+		}
+	})
+
+	ctx := context.WithValue(context.Background(), running.CtxKey, running.CtxParams{State: state})
+
+	plan := running.NewPlan(nil, nil,
+		running.AddNodes("Simple", "S"),
+		running.LinkNodes("S", "END"))
+
+	err := e.RegisterPlan("TestCtxWithState", plan)
+	if err != nil {
+		t.Error(err)
+	}
+
+	<-e.ExecPlan("TestCtxWithState", ctx)
+
+	if version != 2 {
+		t.Error(fmt.Errorf("expect version eq 2, but got %d", version))
+	}
+}
+
 func init() {
 	ops := []running.Option{
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),
