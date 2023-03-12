@@ -335,6 +335,51 @@ func TestCtxWithState(t *testing.T) {
 	}
 }
 
+func TestSkipOnCtxErr(t *testing.T) {
+	ops := []running.Option{
+		running.AddNodes("BaseTest", "B1", "B2"),
+		running.AddNodes("SetState", "S1"),
+		running.SLinkNodes("B1", "B2", "S1"),
+		running.WrapAllNodes("Debug"),
+	}
+
+	props := running.StandardProps(map[string]interface{}{
+		"S1.key":   "k",
+		"S1.value": "v",
+	})
+
+	plan := running.NewPlan(props, nil, ops...)
+
+	running.RegisterPlan("TestSkipOnCtxErr", plan)
+
+	running.WarmupPool("TestSkipOnCtxErr", 1)
+
+	ctx := context.WithValue(context.Background(), running.CtxKey,
+		running.CtxParams{
+			SkipOnCtxErr: true,
+		})
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+	defer cancel()
+
+	output := <-running.ExecPlan("TestSkipOnCtxErr", ctx)
+	if !errors.Is(output.Err, context.DeadlineExceeded) {
+		t.Errorf("expect deadline exceeded error, bug got %v", output.Err)
+	}
+
+	sum := utils.GetRunSummary(output.State)
+	if len(sum.Logs["B1"]) != 1 {
+		t.Errorf("expect B1 run count eq 1, but got %d", len(sum.Logs["B1"]))
+	}
+	if len(sum.Logs["B2"]) != 0 {
+		t.Errorf("expect B2 run count eq 0, but got %d", len(sum.Logs["B2"]))
+	}
+
+	if v, _ := output.State.Query("k"); v != nil {
+		t.Error("expect got empty v")
+	}
+}
+
 func init() {
 	ops := []running.Option{
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),
