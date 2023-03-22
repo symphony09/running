@@ -123,6 +123,8 @@ type _NodeRef struct {
 
 	ReUse bool
 
+	Virtual bool
+
 	Labels map[string]struct{}
 }
 

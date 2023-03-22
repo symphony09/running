@@ -380,6 +380,34 @@ func TestSkipOnCtxErr(t *testing.T) {
 	}
 }
 
+func TestVirtualNodes(t *testing.T) {
+	ops := []running.Option{
+		running.AddVirtualNodes("begin", "stage1", "end"),
+		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),
+		running.LinkNodes("begin", "N1", "N2"),
+		running.RLinkNodes("stage1", "N1", "N2"),
+		running.LinkNodes("stage1", "N3", "N4"),
+		running.RLinkNodes("end", "N3", "N4"),
+
+		// begin -> N1, N2 -> stage1 -> N1, N4 -> end
+
+		running.WrapAllNodes("Debug"),
+	}
+
+	plan := running.NewPlan(nil, nil, ops...)
+
+	err := running.RegisterPlan("TestVirtualNodes", plan)
+	if err != nil {
+		t.Errorf("register plan failed, err=%s", err.Error())
+		return
+	}
+
+	ouput := <-running.ExecPlan("TestVirtualNodes", nil)
+	if ouput.Err != nil {
+		t.Error(ouput.Err)
+	}
+}
+
 func init() {
 	ops := []running.Option{
 		running.AddNodes("Nothing", "N1", "N2", "N3", "N4"),

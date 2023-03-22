@@ -49,6 +49,11 @@ func (worker _Worker) Work(ctx context.Context) <-chan Output {
 	// get node ready to run from a chan of works, block until all node done
 	for nodeName := range worker.Works.TODO() {
 		go func(nodeName string) {
+			if worker.Nodes[nodeName] == nil {
+				worker.Works.Done(nodeName)
+				return
+			}
+
 			if err := ctx.Err(); err != nil && ctxParam.SkipOnCtxErr {
 				output.Err = err
 				worker.Works.Terminate(nodeName)

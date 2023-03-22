@@ -20,6 +20,20 @@ var AddNodes = func(typ string, names ...string) Option {
 	}
 }
 
+// AddVirtualNodes similar to AddNodes, except the nodes are virtual.
+var AddVirtualNodes = func(names ...string) Option {
+	return func(dag *_DAG) {
+		for _, name := range names {
+			if _, ok := dag.NodeRefs[name]; !ok {
+				dag.NodeRefs[name] = &_NodeRef{
+					NodeName: name,
+					Virtual:  true,
+				}
+			}
+		}
+	}
+}
+
 // MergeNodes merge other nodes as sub-node of the first node.
 // example: MergeNodes("A", "B", "C").
 // if node "A" implement the Cluster interface, node "B" and "C" will be injected,

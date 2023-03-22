@@ -200,6 +200,10 @@ func (engine *Engine) buildWorker(name string) (worker *_Worker, err error) {
 	reuse := map[string]Node{} // collect nodes which can be reused in the build nodes process
 
 	for _, v := range plan.graph.Vertexes {
+		if v.RefRoot.Virtual {
+			continue
+		}
+
 		nodeName := v.RefRoot.NodeName
 		nodeMap[nodeName], err = engine.buildNode(plan, nodeName, "", reuse)
 		if err != nil {
@@ -278,6 +282,10 @@ func (engine *Engine) buildNode(plan *Plan, nodeName string, prefix string, reus
 
 		// build sub-nodes just like root node(cluster)
 		for _, ref := range root.SubRefs {
+			if ref.Virtual {
+				continue
+			}
+
 			var subNode Node
 
 			if len(ref.SubRefs) == 0 {
