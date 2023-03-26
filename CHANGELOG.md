@@ -1,4 +1,18 @@
-# [](https://github.com/symphony09/running/compare/v0.2.4...v) (2023-01-31)
+# [](https://github.com/symphony09/running/compare/v0.2.5...v) (2023-03-26)
+
+
+### Features
+
+* add hook state impl ([ef5800d](https://github.com/symphony09/running/commit/ef5800d2e70d1e6161dab77da1063e2326ef6f83))
+* support add virtual nodes ([181f267](https://github.com/symphony09/running/commit/181f26744ff2a8370f75b510cc87c114d82eb61b))
+* support match nodes to run by labels ([f5a703d](https://github.com/symphony09/running/commit/f5a703d584fe044939b9beee6f7ca5580055a22b))
+* support passing state in the context ([2f86481](https://github.com/symphony09/running/commit/2f86481c4280508e1dff7a571a1f671a074e2b9d))
+* support skip nodes by set ctx params ([f64578a](https://github.com/symphony09/running/commit/f64578a23e8532b02d6c1f400cccf13f492fc105))
+* support skip on ctx err ([4c86f00](https://github.com/symphony09/running/commit/4c86f00c9adc6d2060b57c6bd615de3aa8719958))
+
+
+
+## [0.2.5](https://github.com/symphony09/running/compare/v0.2.4...v0.2.5) (2023-01-31)
 
 
 ### Bug Fixes
@@ -89,9 +103,6 @@
 * use props safely ([b5f36e6](https://github.com/symphony09/running/commit/b5f36e68a7f44e4b7d7622d31d97db9498d78a74))
 
 
-### BREAKING CHANGES
-
-* props need implement copy for safe to use it outside the engine
 
 ## [0.1.2](https://github.com/symphony09/running/compare/v0.1.1...v0.1.2) (2022-07-15)
 
