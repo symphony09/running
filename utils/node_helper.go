@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"strings"
 
 	"github.com/symphony09/running"
@@ -13,11 +14,28 @@ import (
 // tag `running:"prop:key"` to get prop value of the key
 func RegisterNodes(e *running.Engine, nodes ...running.Node) error {
 	for _, node := range nodes {
-		name, builder, err := parseNode(node)
+		name, builder, props, err := parseNode(node)
 		if err != nil {
 			return err
 		} else {
 			e.RegisterNodeBuilder(name, builder)
+
+			var info running.NodeBuilderInfo
+			if _, ok := node.(running.Cluster); ok {
+				info.Type = running.TypeOfCluster
+			} else if _, ok = node.(running.Wrapper); ok {
+				info.Type = running.TypeOfWrapper
+			} else {
+				info.Type = running.TypeOfCommon
+			}
+
+			if pc, _, _, ok := runtime.Caller(1); ok {
+				info.From = runtime.FuncForPC(pc).Name()
+			}
+
+			info.Note = fmt.Sprintf("Property Map: %+v\nAuto regitered by util of runnning.", props)
+
+			e.SetNodeBuilderInfo(name, info)
 		}
 	}
 
@@ -26,11 +44,29 @@ func RegisterNodes(e *running.Engine, nodes ...running.Node) error {
 
 // RegisterNodeWithTypeName similar to RegisterNodes, but specify the type name of node
 func RegisterNodeWithTypeName(e *running.Engine, typeName string, node running.Node) error {
-	_, builder, err := parseNode(node)
+	_, builder, props, err := parseNode(node)
 	if err != nil {
 		return err
 	} else {
 		e.RegisterNodeBuilder(typeName, builder)
+
+		var info running.NodeBuilderInfo
+		if _, ok := node.(running.Cluster); ok {
+			info.Type = running.TypeOfCluster
+		} else if _, ok = node.(running.Wrapper); ok {
+			info.Type = running.TypeOfWrapper
+		} else {
+			info.Type = running.TypeOfCommon
+		}
+
+		if pc, _, _, ok := runtime.Caller(1); ok {
+			info.From = runtime.FuncForPC(pc).Name()
+		}
+
+		info.Note = fmt.Sprintf("Propery Map: %+v \nAuto regitered by util of runnning.", props)
+
+		e.SetNodeBuilderInfo(typeName, info)
+
 		return nil
 	}
 }
@@ -39,7 +75,7 @@ type Uninitialized interface {
 	Init() error
 }
 
-func parseNode(node running.Node) (typeName string, builder running.BuildNodeFunc, err error) {
+func parseNode(node running.Node) (typeName string, builder running.BuildNodeFunc, props map[string]reflect.Type, err error) {
 	nodeType := reflect.TypeOf(node)
 	if nodeType.Kind() == reflect.Ptr {
 		nodeType = nodeType.Elem()
@@ -49,6 +85,8 @@ func parseNode(node running.Node) (typeName string, builder running.BuildNodeFun
 		err = fmt.Errorf("non struct type kind not supported, got node type kind = %v", nodeType.Kind())
 		return
 	}
+
+	props = make(map[string]reflect.Type)
 
 	typeName = strings.TrimPrefix(nodeType.Name(), nodeType.PkgPath())
 	autowired := map[string]string{}
@@ -64,7 +102,9 @@ func parseNode(node running.Node) (typeName string, builder running.BuildNodeFun
 				if found {
 					switch strings.TrimSpace(k) {
 					case "prop":
-						autowired[f.Name] = strings.TrimSpace(v)
+						propName := strings.TrimSpace(v)
+						autowired[f.Name] = propName
+						props[propName] = f.Type
 					}
 				} else {
 					switch strings.TrimSpace(k) {

@@ -40,6 +40,27 @@ func TestNodeHelper(t *testing.T) {
 			t.Errorf("node builder not found, got: %v", builders)
 		}
 
+		infos := running.Inspect(e).GetNodeBuildersInfo()
+		emptyInfo := running.NodeBuilderInfo{}
+
+		if infos == nil || infos["HelloNode"] == emptyInfo {
+			t.Error("node info not found")
+		} else {
+			info := infos["HelloNode"]
+
+			if info.Type != running.TypeOfCluster {
+				t.Errorf("wrong type info: %s", info.Type)
+			}
+
+			if info.From != "github.com/symphony09/running/test.TestNodeHelper" {
+				t.Errorf("wrong from info: %s", info.From)
+			}
+
+			if info.Note != "Property Map: map[username:string]\nAuto regitered by util of runnning." {
+				t.Errorf("wrong note info: %s", info.Note)
+			}
+		}
+
 		ops := []running.Option{
 			running.AddNodes("HelloNode", "H"),
 			running.LinkNodes("H"),
