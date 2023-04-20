@@ -63,3 +63,8 @@ func ClearPool(name string) {
 func LoadPlanFromJson(name string, jsonData []byte, prebuilt []Node) error {
 	return Global.LoadPlanFromJson(name, jsonData, prebuilt)
 }
+
+// SetNodeBuilderInfo set meta info of node builder
+func SetNodeBuilderInfo(name string, info NodeBuilderInfo) {
+	Global.SetNodeBuilderInfo(name, info)
+}

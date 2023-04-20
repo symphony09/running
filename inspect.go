@@ -1,6 +1,8 @@
 package running
 
-import "strings"
+import (
+	"strings"
+)
 
 type Inspector struct {
 	target *Engine
@@ -22,6 +24,20 @@ func (i Inspector) GetNodeBuildersName() []string {
 	}
 
 	return names
+}
+
+func (i Inspector) GetNodeBuildersInfo() map[string]NodeBuilderInfo {
+	infos := make(map[string]NodeBuilderInfo)
+	if i.target != nil {
+		i.target.buildersLocker.RLock()
+		defer i.target.buildersLocker.RUnlock()
+
+		for name, info := range i.target.buildersInfo {
+			infos[name] = info
+		}
+	}
+
+	return infos
 }
 
 func (i Inspector) GetPlansName() []string {

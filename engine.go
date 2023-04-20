@@ -15,6 +15,8 @@ type Engine struct {
 
 	builders map[string]BuildNodeFunc
 
+	buildersInfo map[string]NodeBuilderInfo
+
 	plans map[string]*Plan
 
 	pools map[string]*_WorkerPool
@@ -178,6 +180,21 @@ func (engine *Engine) ClearPool(name string) {
 	engine.poolsLocker.Lock()
 	engine.pools[name] = nil
 	engine.poolsLocker.Unlock()
+}
+
+type NodeBuilderInfo struct {
+	Type string
+	From string
+	Note string
+}
+
+func (engine *Engine) SetNodeBuilderInfo(name string, info NodeBuilderInfo) {
+	engine.buildersLocker.Lock()
+	if engine.buildersInfo == nil {
+		engine.buildersInfo = make(map[string]NodeBuilderInfo)
+	}
+	engine.buildersInfo[name] = info
+	engine.buildersLocker.Unlock()
 }
 
 func (engine *Engine) buildWorker(name string) (worker *_Worker, err error) {
