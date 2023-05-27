@@ -27,6 +27,10 @@ type JsonNode struct {
 	Wrappers []string
 
 	ReUse bool
+
+	Virtual bool
+
+	Labels []string
 }
 
 func (plan *Plan) MarshalJSON() ([]byte, error) {
@@ -70,6 +74,15 @@ func newJsonNode(ref *_NodeRef) *JsonNode {
 	node.Type = ref.NodeType
 	node.Wrappers = ref.Wrappers
 	node.ReUse = ref.ReUse
+	node.Virtual = ref.Virtual
+
+	if len(ref.Labels) > 0 {
+		node.Labels = make([]string, 0, len(ref.Labels))
+
+		for label := range ref.Labels {
+			node.Labels = append(node.Labels, label)
+		}
+	}
 
 	for _, subRef := range ref.SubRefs {
 		node.SubNodes = append(node.SubNodes, newJsonNode(subRef))
@@ -140,6 +153,15 @@ func parseRefFromJsonNode(node *JsonNode, graph *_DAG) *_NodeRef {
 		NodeType: node.Type,
 		Wrappers: node.Wrappers,
 		ReUse:    node.ReUse,
+		Virtual:  node.Virtual,
+	}
+
+	if len(node.Labels) > 0 {
+		ref.Labels = make(map[string]struct{}, len(node.Labels))
+
+		for _, label := range node.Labels {
+			ref.Labels[label] = struct{}{}
+		}
 	}
 
 	for _, subNode := range node.SubNodes {
