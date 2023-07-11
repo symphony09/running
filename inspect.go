@@ -62,6 +62,8 @@ type PlanInfo struct {
 	Edges []Edge
 
 	GlobalProps map[string]interface{}
+
+	LabelMap map[string]bool
 }
 
 type VertexInfo struct {
@@ -80,6 +82,10 @@ type NodeInfo struct {
 	Wrappers []string
 
 	ReUse bool
+
+	Virtual bool
+
+	LabelMap map[string]struct{}
 
 	SubNodes []NodeInfo
 }
@@ -130,6 +136,13 @@ func (i Inspector) DescribePlan(name string) PlanInfo {
 		}
 	}
 
+	info.LabelMap = make(map[string]bool)
+	for _, v := range info.Vertexes {
+		for label := range v.NodeInfo.LabelMap {
+			info.LabelMap[label] = true
+		}
+	}
+
 	return info
 }
 
@@ -140,6 +153,8 @@ func describeNode(plan *Plan, node string, path ...string) NodeInfo {
 		NodeName: ref.NodeName,
 		Wrappers: ref.Wrappers,
 		ReUse:    ref.ReUse,
+		Virtual:  ref.Virtual,
+		LabelMap: ref.Labels,
 
 		Props:    map[string]interface{}{},
 		SubNodes: make([]NodeInfo, 0, len(ref.SubRefs)),
