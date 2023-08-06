@@ -1,4 +1,20 @@
-# [](https://github.com/symphony09/running/compare/v0.2.5...v) (2023-03-26)
+# [](https://github.com/symphony09/running/compare/v0.3.1...v) (2023-08-06)
+
+
+### Bug Fixes
+
+* fix missing data during serialization ([ac6a99d](https://github.com/symphony09/running/commit/ac6a99db9e475acf44e336a3ce85cc7986e6b2a3))
+
+
+### Features
+
+* auto set builder info by util ([1d0d88f](https://github.com/symphony09/running/commit/1d0d88f84f1c6957b09d0ef8624e744f887fa430))
+* support set and inspect node builder info ([59ed020](https://github.com/symphony09/running/commit/59ed02095f1164565d57a6c80df9ca0918ae0236))
+* update engine inspector ([5efbb8f](https://github.com/symphony09/running/commit/5efbb8f05a1730751866010ef9d89bf24ad7c3b5))
+
+
+
+## [0.3.1](https://github.com/symphony09/running/compare/v0.2.5...v0.3.1) (2023-03-26)
 
 
 ### Features
